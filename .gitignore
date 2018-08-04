@@ -8,13 +8,13 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+# build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/
 lib64/
 parts/
 sdist/
@@ -40,7 +40,7 @@ htmlcov/
 .tox/
 .coverage
 .coverage.*
-.cache
+# .cache
 nosetests.xml
 coverage.xml
 *.cover
@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+/test/
+/build/*

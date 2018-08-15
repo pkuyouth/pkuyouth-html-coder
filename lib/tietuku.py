@@ -13,7 +13,7 @@ from functools import partial
 import requests
 
 from util import json_dump, json_load, MD5, Logger, Config
-from error import TietukuUploadError, JSONDecodeError
+from error import JSONDecodeError, TietukuUploadError
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 项目根目录
@@ -24,12 +24,11 @@ json_dump = partial(json_dump, Cache_Dir)
 json_load = partial(json_load, Cache_Dir)
 
 
-__all__ = ['TietukuAPi',]
+__all__ = ['TietukuAPI',]
 
 
-class TietukuAPi(object):
-    """ [贴图库 api 类]
-        为图片提供外链
+class TietukuAPI(object):
+    """ [贴图库 api 类] 为图片提供外链
 
         Attributes:
             class:
@@ -48,7 +47,8 @@ class TietukuAPi(object):
     token = config.get('account', 'token')
     aid = config.getint('account', 'aid')
 
-    Validity_Period = 24*60*60*(7-1) # 实际 7 天过期，自定义 6 天即不能用
+    Validity_Period = config.getint('cache', 'cache_time') # 默认缓存 1h
+    # Validity_Period = 24*60*60*(7-1) # 实际 7 天过期，自定义 6 天即不能用
     Image_Links_Cache_JSON = config.get('cache', 'image_links_json')
 
     try:
@@ -65,9 +65,35 @@ class TietukuAPi(object):
                 imgBytes    bytes    图片的 bytes
                 log         bool     是否输出日志
             Returns:
-                links       dict     该文件的外链信息
+                links       dict     该文件的外链信息 {
+                                        'url': 图片链接
+                                        'md5': 图片MD5
+                                        'expire_time': 图片过期的Unix时间/s
+                                    }
             Raises:
                 TietukuUploadError   图片上传错误，请求状态码非 200 可以查询 code 字段的信息
+
+            -------------------------------------------------
+            请求成功的返回 json 包
+            {
+                "width": 1280,
+                "height": 711,
+                "type": "jpg",
+                "size": 24640,
+                "ubburl": "[img]http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg[/img]",
+                "linkurl": "http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg",
+                "htmlurl": "<img src='http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg' />",
+                "markdown": "![Markdown](http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg)",
+                "s_url": "http://i1.bvimg.com/656554/0cf57e9173c0acafs.jpg",
+                "t_url": "http://i1.bvimg.com/656554/0cf57e9173c0acaft.jpg",
+                "findurl": "7cbf06538e66e772"
+            }
+
+            请求失败的返回 json 包，可通过 code 查询相应错误类型，错误信息 == info
+            {
+                "code": "4511",
+                "info": "\u76f8\u518c\u4e0d\u5b58\u5728\u6216\u5df2\u7ecf\u5220\u9664"
+            }
         """
         links = self.imgLinks.get(filename)
         if links is not None and links['expire_time'] > time.time():
@@ -90,9 +116,10 @@ class TietukuAPi(object):
             else:
                 respJson = resp.json()
                 links = {
-                    "o_url": respJson['linkurl'], # 原始图
-                    "s_url": respJson['s_url'],   # 展示图
-                    "t_url": respJson['t_url'],   # 缩略图
+                    "url": respJson['linkurl'],
+                    # "o_url": respJson['linkurl'], # 原始图
+                    # "s_url": respJson['s_url'],   # 展示图
+                    # "t_url": respJson['t_url'],   # 缩略图
                     "md5": MD5(imgBytes),
                     "expire_time": int(time.time() + self.Validity_Period) # 用于校验图片有效性
                 }
@@ -100,25 +127,3 @@ class TietukuAPi(object):
                 json_dump(self.Image_Links_Cache_JSON, self.imgLinks) # 缓存
                 return links
 
-        ''' 请求成功的返回 json 包
-
-            {
-                "width": 1280,
-                "height": 711,
-                "type": "jpg",
-                "size": 24640,
-                "ubburl": "[img]http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg[/img]",
-                "linkurl": "http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg",
-                "htmlurl": "<img src='http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg' />",
-                "markdown": "![Markdown](http://i1.bvimg.com/656554/0cf57e9173c0acaf.jpg)",
-                "s_url": "http://i1.bvimg.com/656554/0cf57e9173c0acafs.jpg",
-                "t_url": "http://i1.bvimg.com/656554/0cf57e9173c0acaft.jpg",
-                "findurl": "7cbf06538e66e772"
-            }
-
-            请求失败的返回 json 包，可通过 code 查询相应错误类型，错误信息 == info
-            {
-                "code": "4511",
-                "info": "\u76f8\u518c\u4e0d\u5b58\u5728\u6216\u5df2\u7ecf\u5220\u9664"
-            }
-        '''

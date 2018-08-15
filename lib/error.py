@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # filename: error.py
 #
-# 错误类
+# 自定义错误类
 #
 
 
@@ -22,8 +22,13 @@ __all__ = [
     'NoConfigOptionError',
     'NoConfigSectionError',
     'NoDocxFileError',
+    'StaticServerTypeError',
     'MultiCountError',
+    'SMMSUploadError',
+    'SMMSGetListError',
+    'SMMSClearError',
 ]
+
 
 
 class ConfigError(BaseException):
@@ -42,15 +47,26 @@ class NoConfigSectionError(ConfigError):
     """没有找到配置节"""
     pass
 
-class NoDocxFileError(BaseException):
+
+
+class CoderError(BaseException):
+    """编码器错误"""
+    pass
+
+class NoDocxFileError(CoderError):
     """没有找到docx文件"""
     pass
 
-class MultiCountError(BaseException):
+class StaticServerTypeError(CoderError):
+    """未注册的图床类型"""
+    pass
+
+class MultiCountError(CoderError):
     """同时统计字数和图片数"""
     pass
 
-class ZoneError(BaseException):
+
+class ZoneError(CoderError):
     """模板区域错误"""
     pass
 
@@ -66,7 +82,10 @@ class UnmatchZoneError(ZoneError):
     """区域未闭合"""
     pass
 
+
+
 class TietukuError(BaseException):
+    """贴图库api错误"""
     pass
 
 class TietukuUploadError(TietukuError):
@@ -130,4 +149,36 @@ class TietukuUploadError(TietukuError):
     4532    缺失图片ID
     4533    没有找到相关信息
     4534    修改图片名称失败
+'''
+
+
+class SMMSError(BaseException):
+    """SM.MS api 错误"""
+    pass
+
+class SMMSUploadError(SMMSError):
+    """SM.MS 上传文件错误"""
+    pass
+
+class SMMSGetListError(SMMSError):
+    """SM.MS 获取文件列表错误"""
+    pass
+
+class SMMSClearError(SMMSError):
+    """SM.MS 清除文件列表错误"""
+    pass
+
+
+'''
+    错误列表
+
+    Access Denied.
+    Upload file count limit.
+    Upload file frequency limit.
+    Server error. Upload directory isn't writable.
+    No files were uploaded.
+    File is empty.
+    File is too large.
+    File has an invalid extension.
+    Could not save uploaded file.
 '''

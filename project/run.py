@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 
 from util import Config
-from tietuku import TietukuAPi
+from tietuku import TietukuAPI
 from coder import HTMLCoder
 from error import NoDocxFileError
 

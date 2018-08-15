@@ -29,7 +29,7 @@ git version 2.11.0
 你可以直接下载该项目的 [zip 文件包](https://github.com/zhongxinghong/PKUyouthHTMLCoder/archive/master.zip) 并解压
 ```console
 debian-9:~# wget https://github.com/zhongxinghong/PKUyouthHTMLCoder/archive/master.zip
-debian-9:~# unzip master.zip 
+debian-9:~# unzip master.zip
 debian-9:~# mv PKUyouthHTMLCoder-master/ PKUyouthHTMLCoder/
 debian-9:~# cd PKUyouthHTMLCoder/
 debian-9:~/PKUyouthHTMLCoder# ls
@@ -46,7 +46,7 @@ LICENSE  README.md  cache  config  lib  project  requirements.txt  static
 
 git 可以方便地同步更新项目，如果该项目发生更新，你可以通过如下命令进行同步
 ```console
-debian-9:~/PKUyouthHTMLCoder# git pull origin master 
+debian-9:~/PKUyouthHTMLCoder# git pull origin master
 From https://github.com/zhongxinghong/PKUyouthHTMLCoder
  * branch            master     -> FETCH_HEAD
 Already up-to-date.
@@ -81,21 +81,27 @@ debian-9:~/PKUyouthHTMLCoder# pip3 install -r requirements.txt
 ## 项目文件夹结构
 
 ```console
-debian-9:~/PKUyouthHTMLCoder# tree 
+debian-9:~/PKUyouthHTMLCoder# tree
 .
 ├── LICENSE
 ├── README.md
 ├── cache                           # 存放贴图库的链接缓存
+│   ├── elimage.imageLinks.json
+│   ├── sm.ms.imageLinks.json
+│   └── tietuku.imageLinks.json
 ├── config                          # 配置文件目录
-│   ├── htmlcoder.ini                   # 编码参数配置
-│   ├── style.ini                       # 排版的 css 样式配置
-│   └── tietuku.ini                     # 贴图库配置
+│   ├── coder.ini                       # 编码参数配置
+│   ├── elimage.ini                     # elimage 图床配置
+│   ├── smms.ini                        # SM.MS 图床配置
+│   ├── style.ini                       # 排版的 css 样式配置
+│   └── tietuku.ini                     # 贴图库 图床配置
 ├── lib                             # 程序包
-│   ├── __init__.py
-│   ├── coder.py                        # 编码主程序
+│   ├── coder.py                        # 编码主程序
+│   ├── elimage.py                      # elimage API
 │   ├── error.py                        # 错误类型定义
+│   ├── smms.py                         # SM.MS API
 │   ├── tags.py                         # DOM 节点定义
-│   ├── tietuku.py                      # 贴图库 API
+│   ├── tietuku.py                      # 贴图库 API
 │   └── util.py                         # 通用函数/类
 ├── project                         # 项目目录
 │   ├── build                           # 排版结果的输出目录
@@ -108,8 +114,6 @@ debian-9:~/PKUyouthHTMLCoder# tree
 └── static
     ├── favicon.ico
     └── preview.template.html
-
-8 directories, 17 files
 ```
 
 ## 使用方法
@@ -132,9 +136,11 @@ drwxr-xr-x 2 root root    46 Aug  5 10:21 template
 >
 > 但是这并不能保证完全兼容，如果你发现有排版异常，请将问题与小哥反馈。我可以根据你提供的 docx 文件向项目中添加新的 xml 解析规则。
 
-- 然后直接运行 `run.py`，即可完成转码
+- 目前有 `Tietuku`, `SM.MS`, `Elimage` 三种图床可以使用，各有优劣，你可以通过修改 `config` 目录下 `coder.ini` 文件中的 `static.server > type` 字段进行手动选择，默认使用 `Elimage` 图床。
+
+- 直接运行 `run.py`，即可完成转码
 ```console
-debian-9:~/PKUyouthHTMLCoder/project# python3 run.py 
+debian-9:~/PKUyouthHTMLCoder/project# python3 run.py
 [INFO] docxparser, 11:12:24, parse /root/PKUyouthHTMLCoder/project/today_prj.docx
 [INFO] tietuku, 11:12:24, uploading image d148236d3022064bbf2d7386afbdfd44.jpeg
 [INFO] tietuku, 11:12:25, uploading image da76f2cd35bbe4376caeda09ac7d8d99.jpeg
@@ -172,8 +178,3 @@ preview.html  today_prj.html
 ## 北青推送排版规则
 
 待补充。老规则可见 [这篇推送](https://mp.weixin.qq.com/s?__biz=MzA3NzAzMDEyNg==&tempkey=OTY4XzRVODRqRDkrQmFrTit1YmFEVmw4UmVqY1JwRnRoYUxKNm9PdVdlOTFZQ1gwWmlBOUt3dVRYRzhsREhhUnVfOEloYTlXeXdINDhWMHUxY3RwY0xTUFdXYkR5eG1NeGlmQkNSSlRMTEllcjFpQW82dDNsZTkzTTZnWDRmUUU1bjNjU2hjRC1jX1hCVlRxbkRNWmRGUy1Gc215U3BQZ2tSUkRZZDJReVF%2Bfg%3D%3D&chksm=04acc80f33db41198d016a5ae58f727854a6e0e510009f793aa258dfea0248a650c2a0d9a47e#rd) 和 [这篇推送](https://mp.weixin.qq.com/s?__biz=MzA3NzAzMDEyNg==&tempkey=OTY4X3czR1RoQWJGZDBiaUdOL3lEVmw4UmVqY1JwRnRoYUxKNm9PdVdlc2dpek41RWpBODV5Ujk3NlV4T3dPNUt5SXc1d1hlajdNRXpQdmI5aGM5WjNZVjVOdE92RmlEZXhuNWhXMWllNXN1NE11cWtSMTkwRVEyQ25PUzdTX0FTa0dKVmNYemNYMk1ST0MzMHVSeHZ0UndtVk40Y2VUZVM2bjJKUXFVbEF%2Bfg%3D%3D&chksm=16c4990821b3101e310754723ba3b143947e6cf673654eaa5e9d40f4310d9d0da20368d51b68#rd) →_→
-
-
-## 证书
-
-该项目使用 [MIT 证书](http://www.opensource.org/licenses/MIT) 发布。

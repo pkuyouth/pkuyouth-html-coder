@@ -13,9 +13,9 @@ from zipfile import ZipFile
 from lxml import etree
 
 from tags import *
-from tietuku import TietukuAPi
 from util import MD5, Logger, Config
-from error import ContradictoryZoneError, UnmatchZoneError, UnregisteredZoneError, MultiCountError
+from error import ContradictoryZoneError, UnmatchZoneError, UnregisteredZoneError, \
+                    MultiCountError, StaticServerTypeError
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 项目根目录
@@ -31,21 +31,41 @@ class DocxParser(object):
 
         Attributes:
             class:
-                tietuku         TietukuAPi          贴图库 api 类的实例
+                logger                  Logger            日志实例
+                config                  Config            配置文件实例
+                Static_Server_Type      str               图床类型
+                static                  StaticAPI         静态文件 api 类的实例
             instance:
-                __docx          zipfile.ZipFile     docx 文件的 zipfile 对象
-                __imgMap        dict                存放 docx 文档中图片信息的映射
-                                                    rId: {
-                                                        filename: MD5文件名
-                                                        target: 图片在 docx 中的文件路径
-                                                        links: 文件在贴图库中的外链信息
-                                                    }
-                documentXml     bytes               记录 docx 文档结构的 xml 文件
-                filename        str                 去扩展名的 docx 文件名
+                __docx                  zipfile.ZipFile   docx 文件的 zipfile 对象
+                __imgMap                dict              存放 docx 文档中图片信息的映射
+                                                          rId: {
+                                                              filename: MD5文件名
+                                                              target: 图片在 docx 中的文件路径
+                                                              links: 文件在贴图库中的外链信息
+                                                          }
+                documentXml             bytes             记录 docx 文档结构的 xml 文件
+                filename                str               去扩展名的 docx 文件名
+            Raises:
+                StaticServerTypeError   非法的静态服务器类型
     """
 
     logger = Logger('docxparser')
-    tietuku = TietukuAPi()
+    config = Config('coder.ini')
+
+    Static_Server_Type = config.get('static.server', 'type')
+
+    if Static_Server_Type == 'SM.MS':
+        from smms import SMMSAPI
+        static = SMMSAPI()
+    elif Static_Server_Type == 'Tietuku':
+        from tietuku import TietukuAPI
+        static = TietukuAPI()
+    elif Static_Server_Type == 'Elimage':
+        from elimage import ElimageAPI
+        static = ElimageAPI()
+    else:
+        raise StaticServerTypeError("no such static server '%s' !" % Static_Server_Type)
+
 
     def __init__(self, file):
         self.logger.info('parse %s' % os.path.abspath(file)) # 打日志
@@ -70,23 +90,19 @@ class DocxParser(object):
                 file = os.path.join('word', target)
                 imgBytes = self.__docx.read(file)
                 filename = MD5(imgBytes) + os.path.splitext(file)[1]
-                links = self.tietuku.upload(filename, imgBytes, log=True)
+                links = self.static.upload(filename, imgBytes, log=True)
                 imgMap[_id] = {"target": target, "filename": filename, "links": links}
         return imgMap
 
-    def get_img_src(self, rId, url_type='o_url'):
+    def get_img_src(self, rId):
         """ 获得图片外链
 
             Args:
                 rId         str    图片在 docx 文件中的 id
-                url_type    str    外链类型
-                                      o_url  原图（origin）
-                                      s_url  展示图（show_url）
-                                      t_url  缩略图（thumbnail）
             Returns:
                 src         str    图片外链
         """
-        return self.__imgMap[rId]['links'][url_type]
+        return self.__imgMap[rId]['links']['url']
 
 
 
@@ -112,7 +128,7 @@ class HTMLCoder(object):
     """
 
     logger = Logger('htmlcoder')
-    config = Config('htmlcoder.ini')
+    config = Config('coder.ini')
 
     zones = ("head","body","tail")
 

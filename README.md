@@ -136,7 +136,7 @@ drwxr-xr-x 2 root root    46 Aug  5 10:21 template
 >
 > 但是这并不能保证完全兼容，如果你发现有排版异常，请将问题与小哥反馈。我可以根据你提供的 docx 文件向项目中添加新的 xml 解析规则。
 
-- 目前有 `Tietuku`, `SM.MS`, `Elimage` 三种图床可以使用，各有优劣，你可以通过修改 `config` 目录下 `coder.ini` 文件中的 `static.server > type` 字段进行手动选择，默认使用 `Elimage` 图床。
+- 目前有 `Tietuku`, `SM.MS`, `Elimage` 三种图床可以使用，各有优劣，你可以通过修改 `config` 目录下 `coder.ini` 文件中的 `static.server > type` 字段进行手动选择，默认使用 `Tietuku` 图床。
 
 - 直接运行 `run.py`，即可完成转码
 ```console

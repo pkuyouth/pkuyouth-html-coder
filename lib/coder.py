@@ -87,7 +87,7 @@ class DocxParser(object):
                 continue
             else:
                 _id, target = rel.get('Id'), rel.get('Target')
-                file = os.path.join('word', target)
+                file = 'word/' + target # ZipFile 内部路径统一为 '/' 连接，此处不可用 os.path.join 连接，否则可能由于系统不同导致路径
                 imgBytes = self.__docx.read(file)
                 filename = MD5(imgBytes) + os.path.splitext(file)[1]
                 links = self.static.upload(filename, imgBytes, log=True)

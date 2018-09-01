@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # filename: run.py
 
-
 import sys
 sys.path.append('../lib/')
 
@@ -43,8 +42,8 @@ def main():
 	htmlcoder = HTMLCoder(file=__get_docx_file(), output=Build_Dir)
 	htmlcoder.work()
 
-	with open(os.path.join(Static_Dir, "preview.template.html"), "r") as rfp:
-		with open(os.path.join(Build_Dir, "preview.html"), "w") as wfp:
+	with open(os.path.join(Static_Dir, "preview.template.html"), "r", encoding="utf-8") as rfp:
+		with open(os.path.join(Build_Dir, "preview.html"), "w", encoding="utf-8") as wfp:
 			wfp.write(rfp.read().format(
 				title = htmlcoder.filename,
 				src = "./%s.html" % htmlcoder.filename,

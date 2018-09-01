@@ -180,7 +180,7 @@ class Config(object):
         else:
             self.ini = ini
             self.__config = RawConfigParser(allow_no_value=True)
-            self.__config.read(file)
+            self.__config.read(file, encoding="utf-8")
 
     def __getitem__(self, key):
         """ 内部实例 __config 的 __getitem__ 方法的传递

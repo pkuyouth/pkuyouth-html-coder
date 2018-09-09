@@ -383,6 +383,8 @@ class HTMLCoder(object):
         if not self.No_Ref:
             self.__tail.insert(Br(), Br(), self.__ref) # 先插两行
 
+        self.__tail + Br() # 最后插一行
+
         """最后合并三个 box ，构造 HTML 文档"""
         self.__html + WrapBox(self.__head) + WrapBox(self.__body) + WrapBox(self.__tail)
 

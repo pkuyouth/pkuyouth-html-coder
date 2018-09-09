@@ -31,7 +31,7 @@ __all__ = [
 
 
 
-class ConfigError(BaseException):
+class ConfigError(Exception):
     """配置文件错误"""
     pass
 
@@ -49,7 +49,7 @@ class NoConfigSectionError(ConfigError):
 
 
 
-class CoderError(BaseException):
+class CoderError(Exception):
     """编码器错误"""
     pass
 
@@ -84,7 +84,7 @@ class UnmatchZoneError(ZoneError):
 
 
 
-class TietukuError(BaseException):
+class TietukuError(Exception):
     """贴图库api错误"""
     pass
 
@@ -152,7 +152,7 @@ class TietukuUploadError(TietukuError):
 '''
 
 
-class SMMSError(BaseException):
+class SMMSError(Exception):
     """SM.MS api 错误"""
     pass
 

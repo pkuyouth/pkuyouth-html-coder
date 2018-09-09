@@ -8,7 +8,7 @@
 
 import os
 import re
-import copy
+from datetime import date
 from zipfile import ZipFile
 from lxml import etree
 
@@ -33,18 +33,19 @@ class DocxParser(object):
             class:
                 logger                  Logger            日志实例
                 config                  Config            配置文件实例
-                Static_Server_Type      str               图床类型
-                static                  StaticAPI         静态文件 api 类的实例
             instance:
+                __static                  StaticAPI         静态文件 api 类的实例
                 __docx                  zipfile.ZipFile   docx 文件的 zipfile 对象
                 __imgMap                dict              存放 docx 文档中图片信息的映射
                                                           rId: {
                                                               filename: MD5文件名
                                                               target: 图片在 docx 中的文件路径
-                                                              links: 文件在贴图库中的外链信息
+                                                              links: 文件外链
                                                           }
                 documentXml             bytes             记录 docx 文档结构的 xml 文件
                 filename                str               去扩展名的 docx 文件名
+                Output_Dir              str               HTML 文档的生成目录
+                Extract_Pict            bool              附加参数：是否按顺序解压图片
             Raises:
                 StaticServerTypeError   非法的静态服务器类型
     """
@@ -52,30 +53,45 @@ class DocxParser(object):
     logger = Logger('docxparser')
     config = Config('coder.ini')
 
-    Static_Server_Type = config.get('static.server', 'type')
 
-    if Static_Server_Type == 'SM.MS':
-        from smms import SMMSAPI
-        static = SMMSAPI()
-    elif Static_Server_Type == 'Tietuku':
-        from tietuku import TietukuAPI
-        static = TietukuAPI()
-    elif Static_Server_Type == 'Elimage':
-        from elimage import ElimageAPI
-        static = ElimageAPI()
-    else:
-        raise StaticServerTypeError("no such static server '%s' !" % Static_Server_Type)
+    def __init__(self, file, output, **kwargs):
+        """
+            Args:
+                file        str      docx 文件的路径
+                output      str      html 文档的输出路径
+                **kwargs             来自命令行的参数设置
+        """
 
-
-    def __init__(self, file):
         self.logger.info('parse %s' % os.path.abspath(file)) # 打日志
+
+        self.Output_Dir = output
+        self.Extract_Pict = kwargs.get('extract_picture') or False
+        self.__static = self.__get_static_server(kwargs.get('static_server_type'))
         self.__docx = ZipFile(file)
         self.__imgMap = self.__get_img_map()
         self.documentXml = self.__docx.read("word/document.xml")
 
+
     @property
     def filename(self):
         return os.path.basename(self.__docx.filename)
+
+
+    def __get_static_server(self, static_server_type=None):
+        """ 确定图床类型，构造图床实例
+        """
+        sType = static_server_type or self.config.get('static.server', 'type')
+        if sType == 'SM.MS':
+            from smms import SMMSAPI
+            return SMMSAPI()
+        elif sType == 'Tietuku':
+            from tietuku import TietukuAPI
+            return TietukuAPI()
+        elif sType == 'Elimage':
+            from elimage import ElimageAPI
+            return ElimageAPI()
+        else:
+            raise StaticServerTypeError("no such static server '%s' !" % sType)
 
     def __get_img_map(self):
         """ 构造 imgMap 属性
@@ -83,16 +99,29 @@ class DocxParser(object):
         imgMap = {}
         tree = etree.fromstring(self.__docx.read("word/_rels/document.xml.rels"))
         for rel in tree.findall("Relationship", namespaces=tree.nsmap):
-            if rel.get('Target')[:6] != 'media/':
+            if rel.get('Target')[:11] != 'media/image':
                 continue
             else:
                 _id, target = rel.get('Id'), rel.get('Target')
                 file = 'word/' + target # ZipFile 内部路径统一为 '/' 连接，此处不可用 os.path.join 连接，否则可能由于系统不同导致路径
                 imgBytes = self.__docx.read(file)
+
+                if self.Extract_Pict: # 解压到 images/ 目录
+                    imgId, ext = os.path.splitext(os.path.basename(target))
+                    imgId = imgId[5:].zfill(3)  # 去掉 image 前缀, 补齐 3 位数
+                    imgFile = "{date}_{idx}{ext}".format(date=date.strftime(date.today(),"%y%m%d"),idx=imgId,ext=ext)
+                    imagesDir = os.path.abspath(os.path.join(self.Output_Dir, "images/"))
+                    if not os.path.exists(imagesDir):
+                        os.mkdir(imagesDir)
+                    with open(os.path.join(imagesDir, imgFile),"wb") as fp:
+                        fp.write(imgBytes)
+                    self.logger.info("extract image %s to %s" % (imgFile, imagesDir))
+
                 filename = MD5(imgBytes) + os.path.splitext(file)[1]
-                links = self.static.upload(filename, imgBytes, log=True)
+                links = self.__static.upload(filename, imgBytes, log=True)
                 imgMap[_id] = {"target": target, "filename": filename, "links": links}
         return imgMap
+
 
     def get_img_src(self, rId):
         """ 获得图片外链
@@ -121,10 +150,10 @@ class HTMLCoder(object):
                 docx             DocxParser          DocxParser 实例
                 filename         str                 去拓展名的 docx 文件名
                 Output_Dir       str                 HTML 文档的生成目录
-                No_Rpt           bool                参数：是否有记者信息
-                No_Ref           bool                参数：是否有参考文献
-                Count_Word       bool                参数：是否统计字数，不可与 Count_Pict 同时为 True
-                Count_Pict       bool                参数：是否统计图片，不可与 Count_Word 同时为 True
+                No_Rpt           bool                编码参数：是否有记者信息
+                No_Ref           bool                编码参数：是否有参考文献
+                Count_Word       bool                编码参数：是否统计字数，不可与 Count_Pict 同时为 True
+                Count_Pict       bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
     """
 
     logger = Logger('htmlcoder')
@@ -137,25 +166,25 @@ class HTMLCoder(object):
     regex_zoneEnd = re.compile(r"^end(\S+)$", re.I) # 匹配 {% endxxxx %}
 
 
-    def __init__(self, file, output):
+    def __init__(self, file, output, **kwargs):
         """
             Args:
                 file      str      docx 文件的路径
                 output    str      html 文档的输出路径
-
+                **kwargs           来自命令行的参数设置
             Raises:
                 MultiCountError    同时统计字数和图片数
         """
 
-        self.docx = DocxParser(file)
+        self.docx = DocxParser(file, output=output, **kwargs)
         self.filename = os.path.splitext(self.docx.filename)[0]
         self.Output_Dir = output
 
         """ 编码参数"""
-        self.No_Rpt = self.config.getboolean('params', 'no_reporter')
-        self.No_Ref = self.config.getboolean('params', 'no_reference')
-        self.Count_Word = self.config.getboolean('params', 'count_word')
-        self.Count_Pict = self.config.getboolean('params', 'count_picture')
+        self.No_Rpt = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
+        self.No_Ref = kwargs.get('no_reference') or self.config.getboolean('params', 'no_reference')
+        self.Count_Word = kwargs.get('count_word') or self.config.getboolean('params', 'count_word')
+        self.Count_Pict = kwargs.get('count_picture') or self.config.getboolean('params', 'count_picture')
 
         """ 过程变量"""
         self.__head = HeadBox()                  # 开头部分 box

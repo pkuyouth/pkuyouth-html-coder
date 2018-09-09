@@ -1,0 +1,125 @@
+/*
+    filename: style.css
+    推送格式的 css 版本
+ */
+
+
+.div-head { /* 开头部分的 box */
+    padding: 0px 10px;
+    line-height: 2;
+    font-size: 14px;
+    text-align: justify;
+    color: #3E3E3E;
+}
+
+.div-body { /* 正文部分的 box */
+    padding: 0px 10px;
+    line-height: 2;
+    font-size: 14px;
+    text-align: justify;
+    color: #3E3E3E;
+}
+
+.div-tail { /* 文末部分的 box */
+    padding: 0px 10px;
+    line-height: 2;
+    font-size: 14px;
+    text-align: justify;
+    color: #3E3E3E;
+}
+
+.div-count { /* 字数统计框的 box */
+    border-left: 5px solid #A5A5A5;
+}
+
+.div-ref { /* 参考文献框的 box */
+    border-left: 3px solid #A5A5A5;
+}
+
+.div-wrap { /* 水印框的 box （最外层的 section 会被公号去掉 style ，所以这里做一层皮） */
+
+}
+
+.p-normal { /* 正文段落 */
+    text-align: justify;
+}
+
+.p-right-note { /* 右对齐的引用段落 */
+    text-align: right;
+}
+
+.p-image-note { /* 图注段落 */
+    text-align: left;
+    font-size: 12px;
+    color: #A5A5A5;
+}
+
+.p-end-note { /* 尾注（微信编辑之类信息）段落 */
+    text-align: right;
+    font-size: 12px;
+    color: #A5A5A5;
+}
+
+.p-count { /* 字数统计框的文字段落 */
+    margin: 0px 5px;
+}
+
+.p-reporter { /* 记者信息的段落 */
+    text-align: justify;
+    color: #A5A5A5;
+}
+
+.p-reference { /* 参考文献的段落 */
+    text-align: justify;
+    margin: 0px 10px;
+    font-size: 12px;
+    color: #A5A5A5;
+}
+
+.p-br { /* 空行段落 */
+    text-align: justify;
+    font-size: 14px;
+}
+
+.p-hr { /* 分割线段落 */
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    line-height: 2;
+    padding-bottom: 10px;
+}
+
+.p-h1 { /* 大标题段落 */
+    text-align: justify;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 0px;
+}
+
+.p-img { /* 图片段落 */
+    width: 100%;
+}
+
+.span-red-15 { /* 15号加粗红字（参考文献框的标题） */
+    font-size: 15px;
+    font-weight: bold;
+    color: #993A3A;
+    margin-bottom: 10px;
+}
+
+.span-red-16 { /* 16号加粗红字（统计框的数字） */
+    font-size: 16px;
+    font-weight: bold;
+    color: #993A3A;
+}
+
+.span-note-syb { /* 图注前的红三角 */
+    display: inline-block;
+    vertical-align: center;
+    color: #993A3A;
+    margin-right: 10px;
+}
+
+.hr { /* 分割线 */
+    background-color: #A5A5A5;
+    height: 1px;
+}

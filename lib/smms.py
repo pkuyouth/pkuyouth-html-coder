@@ -90,7 +90,7 @@ class SMMSAPI(object):
             msg String  No files were uploaded. 上传图片出错时将会出现
         """
         links = self.imgLinks.get(filename)
-        if links is not None and links['expire_time'] > time.time():
+        if links is not None:
             if log:
                 self.logger.info('get image %s from cache' % filename)
             return links

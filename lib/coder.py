@@ -183,8 +183,16 @@ class HTMLCoder(object):
         """ 编码参数"""
         self.No_Rpt = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
         self.No_Ref = kwargs.get('no_reference') or self.config.getboolean('params', 'no_reference')
-        self.Count_Word = kwargs.get('count_word') or self.config.getboolean('params', 'count_word')
-        self.Count_Pict = kwargs.get('count_picture') or self.config.getboolean('params', 'count_picture')
+
+        if kwargs.get('count_picture'):
+            self.Count_Word = False
+            self.Count_Pict = True
+        elif kwargs.get('count_word'):
+            self.Count_Word = True
+            self.Count_Pict = False
+        else:
+            self.Count_Word = self.config.getboolean('params', 'count_word')
+            self.Count_Pict = self.config.getboolean('params', 'count_picture')
 
         """ 过程变量"""
         self.__head = HeadBox()                  # 开头部分 box

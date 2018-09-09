@@ -5,20 +5,20 @@
 
 ## 环境配置
 
-通过 [Python 官网](https://www.python.org/downloads/) 下载 Python3 安装包，并以默认方式安装即可。安装成功后，打开命令行，输入 `python3 --version` 可看到如下输出结果
+通过 [Python 官网](https://www.python.org/downloads/) 下载 Python3 安装包，并以默认方式安装即可。安装成功后，打开命令行，输入 `python3 --version` 可看到如下输出结果。
 ```console
 debian-9:~# python3 --version
 Python 3.6.6
 ```
 
-pip3 应该已经默认安装了。打开命令行，输入 `pip3 --version` 可看到如下输出结果
+pip3 应该已经默认安装了。打开命令行，输入 `pip3 --version` 可看到如下输出结果。
 ```console
 debian-9:~# pip3 --version
 pip 9.0.1 from /usr/lib/python3/dist-packages (python 3.6)
 ```
-如果未找到 pip3 命令，Windows 用户可能需要检查一下 pip3 是否已被添加到系统环境变量中。如果是并未附带安装，请手动安装 pip3 ，例如通过 [pip 官网](https://pip.pypa.io/en/stable/reference/pip_install/) 。安装过程比价简单就不赘述了，有问题可自行查阅网上教程，或者来问小哥。
+如果未找到 pip3 命令，Windows 用户可能需要检查一下 pip3 是否已被添加到系统环境变量中。如果是并未附带安装，请手动安装 pip3 ，例如通过 [pip 官网](https://pip.pypa.io/en/stable/reference/pip_install/) 或 [get-pip.py](https://bootstrap.pypa.io/get-pip.py)。安装过程比价简单就不赘述了，有问题可自行查阅网上教程，或者来问小哥。
 
-你也可以选择性安装 git 来方便地下载和同步更新该项目。通过 [git 官网](https://git-scm.com/downloads) 下载，并以默认方式安装即可。安装成功后，打开命令行，输入 `git --version` 可看到如下输出结果
+你也可以选择性安装 git 来方便地下载和同步更新该项目。通过 [git 官网](https://git-scm.com/downloads) 下载，并以默认方式安装即可。安装成功后，打开命令行，输入 `git --version` 可看到如下输出结果。
 ```console
 debian-9:~# git --version
 git version 2.11.0
@@ -26,7 +26,7 @@ git version 2.11.0
 
 ## 下载项目
 
-你可以直接下载该项目的 [zip 文件包](https://github.com/zhongxinghong/PKUyouthHTMLCoder/archive/master.zip) 并解压
+你可以直接下载该项目的 [zip 文件包](https://github.com/zhongxinghong/PKUyouthHTMLCoder/archive/master.zip) 并解压。
 ```console
 debian-9:~# wget https://github.com/zhongxinghong/PKUyouthHTMLCoder/archive/master.zip
 debian-9:~# unzip master.zip
@@ -36,7 +36,7 @@ debian-9:~/PKUyouthHTMLCoder# ls
 LICENSE  README.md  cache  config  lib  project  requirements.txt  static
 ```
 
-如果你已经安装了 git，也可以在命令行下载。以下命令将会在你的当前路径下新建文件夹 `PKUyouthHTMLCoder` 并将项目下载到其中
+如果你已经安装了 git，也可以在命令行下载。以下命令将会在你的当前路径下新建文件夹 `PKUyouthHTMLCoder` 并将项目下载到其中。
 ```console
 debian-9:~# git clone https://github.com/zhongxinghong/PKUyouthHTMLCoder.git
 debian-9:~# cd PKUyouthHTMLCoder/
@@ -44,7 +44,7 @@ debian-9:~/PKUyouthHTMLCoder# ls
 LICENSE  README.md  cache  config  lib  project  requirements.txt  static
 ```
 
-git 可以方便地同步更新项目，如果该项目发生更新，你可以通过如下命令进行同步
+git 可以方便地同步更新项目，如果该项目发生更新，你可以通过如下命令进行同步。
 ```console
 debian-9:~/PKUyouthHTMLCoder# git pull origin master
 From https://github.com/zhongxinghong/PKUyouthHTMLCoder
@@ -54,24 +54,24 @@ Already up-to-date.
 
 ## 安装依赖包
 
-接下来利用 pip3 安装该项目的依赖包。该项目依赖于 `requests` 和 `lxml`，你也可选择性安装 `simplejson`。
+接下来利用 pip3 安装该项目的依赖包。该项目依赖于 `requests` 和 `lxml`，你也可选择性安装 `simplejson` 。
 
-以下命令将从 pip3 默认源下载和安装最新版本的 `requests` 和 `lxml`
+以下命令将从 pip3 默认源下载和安装最新版本的 `requests` 和 `lxml` 。
 ```console
 debian-9:~# pip3 install requests lxml
 ```
 
-同理，运行以下命令可选择性安装 `simplejson`
+同理，运行以下命令可选择性安装 `simplejson` 。
 ```console
 debian-9:~# pip3 install simplejson
 ```
 
-你也可以手动指定 pip3 下载源来加快下载速度，这里以清华镜像源为例
+你也可以手动指定 pip3 下载源来加快下载速度，这里以清华镜像源为例。
 ```console
 debian-9:~# pip3 install requests lxml simplejson -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-你也可以通过项目根目录中的 `requirements.txt` 来安装指定版本的依赖包。首先进入项目根目录，然后运行以下命令即可
+你也可以通过项目根目录中的 `requirements.txt` 来安装指定版本的依赖包。首先进入项目根目录，然后运行以下命令即可。
 ```console
 debian-9:~# cd PKUyouthHTMLCoder/
 debian-9:~/PKUyouthHTMLCoder# pip3 install -r requirements.txt
@@ -122,7 +122,7 @@ debian-9:~/PKUyouthHTMLCoder# tree
 
 ### 流程简介
 
-1. 进入 `project` 目录，并将 `template` 目录下的 `template.docx` 模板文件复制到该目录下
+1. 进入 `project` 目录，并将 `template` 目录下的 `template.docx` 模板文件复制到该目录下。
 ```console
 debian-9:~/PKUyouthHTMLCoder/project# cp template/template.docx ./today_prj.docx
 debian-9:~/PKUyouthHTMLCoder/project# ls -l
@@ -140,7 +140,7 @@ drwxr-xr-x 2 root root    46 Aug  5 10:21 template
 >
 > 但是这并不能保证完全兼容，如果你发现有排版异常，请将问题与小哥反馈。我可以根据你提供的 \*.docx 文件向项目中添加新的 xml 解析规则。
 
-3. 运行 `run.py`，即可完成转码
+3. 运行 `run.py`，即可完成转码。
 ```console
 debian-9:~/PKUyouthHTMLCoder/project# python3 run.py
 [INFO] docxparser, 11:12:24, parse /root/PKUyouthHTMLCoder/project/today_prj.docx

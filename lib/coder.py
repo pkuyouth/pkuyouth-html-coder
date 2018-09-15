@@ -296,8 +296,10 @@ class HTMLCoder(object):
                 True / False    bool
         """
         for i in range(p.getparent().index(p)-1, -1, -1): # 从当前节点开始往前找
-            _p = self.__ps[i]
-            if _p.text: # 是正文段
+            _p = self.__ps[i] # 注意！ __ps 和 p.getparent() 的匹配结果数不同！这会导致索引错误！
+            if _p is p: # 由于原始 parent 必定多余 p 标签，因此此处多做一次校验，如果不是就往前寻找
+                continue
+            elif _p.text: # 是正文段
                 return False
             elif self.__find_img(_p) != []: # 无字，但找到图，说明相邻
                 return True

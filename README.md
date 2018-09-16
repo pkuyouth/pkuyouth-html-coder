@@ -1,6 +1,6 @@
 # PKUyouthHTMLCoder
 
-《北大青年》微信推送自动排版小工具 v1.0.4
+《北大青年》微信推送自动排版小工具 v1.0.5
 
 
 ## 环境配置
@@ -223,8 +223,8 @@ Options:
 
     --no-reporter       Whether this article has reporters information or not.
                         (Default: False)
-    --no-reference      Whether this article has references or not. (Default:
-                        True)
+    --has-reference     Whether this article has references or not. (Default:
+                        False)
     --count-word        Output word's sum. (Default: True)
     --count-picture     Output picture's sum. (Default: False)
 
@@ -453,6 +453,7 @@ docx_unzip/word/media/
 - v1.0.2 添加 SM.MS 与 Elimage 图床支持。
 - v1.0.3 修复了 Windows 环境下文件读写时编码错误的问题；添加了命令行界面，支持通过命令行选项来设置编码参数。
 - v1.0.4 修复了部分图片与下方段落间未能正确空行的偶发问题。
+- v1.0.5 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考文献的错误。
 
 ## 证书
 

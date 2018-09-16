@@ -42,38 +42,45 @@
 
 .p-normal { /* 正文段落 */
     text-align: justify;
+    letter-spacing: 0px;
 }
 
 .p-right-note { /* 右对齐的引用段落 */
     text-align: right;
+    letter-spacing: 0px;
 }
 
 .p-image-note { /* 图注段落 */
     text-align: left;
     font-size: 12px;
     color: #A5A5A5;
+    letter-spacing: 0px;
 }
 
 .p-end-note { /* 尾注（微信编辑之类信息）段落 */
     text-align: right;
     font-size: 12px;
     color: #A5A5A5;
+    letter-spacing: 0px;
 }
 
 .p-count { /* 字数统计框的文字段落 */
-    margin: 0px 5px;
+    padding: 0px 10px;
+    letter-spacing: 0px;
 }
 
 .p-reporter { /* 记者信息的段落 */
     text-align: justify;
     color: #A5A5A5;
+    letter-spacing: 0px;
 }
 
 .p-reference { /* 参考文献的段落 */
     text-align: justify;
-    margin: 0px 10px;
+    padding: 0px 10px;
     font-size: 12px;
     color: #A5A5A5;
+    letter-spacing: 0px;
 }
 
 .p-br { /* 空行段落 */

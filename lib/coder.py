@@ -151,7 +151,7 @@ class HTMLCoder(object):
                 filename         str                 去拓展名的 docx 文件名
                 Output_Dir       str                 HTML 文档的生成目录
                 No_Rpt           bool                编码参数：是否有记者信息
-                No_Ref           bool                编码参数：是否有参考文献
+                Has_Ref          bool                编码参数：是否有参考文献
                 Count_Word       bool                编码参数：是否统计字数，不可与 Count_Pict 同时为 True
                 Count_Pict       bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
     """
@@ -182,7 +182,7 @@ class HTMLCoder(object):
 
         """ 编码参数"""
         self.No_Rpt = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
-        self.No_Ref = kwargs.get('no_reference') or self.config.getboolean('params', 'no_reference')
+        self.Has_Ref = kwargs.get('has_reference') or self.config.getboolean('params', 'has_reference')
 
         if kwargs.get('count_picture'):
             self.Count_Word = False
@@ -382,7 +382,7 @@ class HTMLCoder(object):
         self.__head.append(PHr(Hr()))  # 构造分割线
 
         """构造参考文献框"""
-        if not self.No_Ref:
+        if self.Has_Ref:
             self.__tail.insert(Br(), Br(), self.__ref) # 先插两行
 
         self.__tail + Br() # 最后插一行
@@ -458,7 +458,7 @@ class HTMLCoder(object):
             if align == 'right': # 尾注，记者信息，需转义
                 self.__tail + PEndNote(self.__to_SBC_case(p.text)) # 不空行
             else: # 其余视为左对齐注释和参考文献
-                if not self.No_Ref:
+                if self.Has_Ref:
                     if self.__is_bold(p): # 标题
                         self.__ref + PRef(R15(p.text))
                     else:

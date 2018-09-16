@@ -3,7 +3,7 @@
 # filename: run.py
 
 __author__ = "Rabbit"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 import sys
@@ -72,8 +72,8 @@ if __name__ == '__main__':
 			description="Or will use default setting from 'config/coder.ini' file.")
 	group_coding_params.add_option("--no-reporter", action="store_true", dest="no_reporter",
 										help="Whether this article has reporters information or not. (Default: False)")
-	group_coding_params.add_option("--no-reference", action="store_true", dest="no_reference",
-										help="Whether this article has references or not. (Default: True)")
+	group_coding_params.add_option("--has-reference", action="store_true", dest="has_reference",
+										help="Whether this article has references or not. (Default: False)")
 	group_coding_params.add_option("--count-word", action="store_true", dest="count_word",
 										help="Output word's sum. (Default: True)")
 	group_coding_params.add_option("--count-picture", action="store_true", dest="count_picture",

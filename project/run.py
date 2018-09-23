@@ -3,7 +3,7 @@
 # filename: run.py
 
 __author__ = "Rabbit"
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 import sys

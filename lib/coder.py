@@ -378,12 +378,12 @@ class HTMLCoder(object):
             self.__head.insert(self.__count, Br()) # 头插一行
 
         """完成 head-box 的构造"""
-        self.__head.insert(Br(), Br()) # 头插两行留放顶图
+        self.__head.insert(Br()) # 头插一行留放顶图
         self.__head.append(PHr(Hr()))  # 构造分割线
 
         """构造参考文献框"""
         if self.Has_Ref:
-            self.__tail.insert(Br(), Br(), self.__ref) # 先插两行
+            self.__tail.insert(Br(), self.__ref) # 先插一行
 
         self.__tail + Br() # 最后插一行
 

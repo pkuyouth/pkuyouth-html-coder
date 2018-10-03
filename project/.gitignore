@@ -2,7 +2,7 @@
 ###################
 
 # ignore all docx files in this dir...
-*.docx
+/*.docx
 
 # ... except for this one.
 !.gitignore

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: error.py
+# filename: lib/error.py
 #
 # 自定义错误类
 #
@@ -8,88 +8,113 @@
 
 try:
     from simplejson.errors import JSONDecodeError
-except (ImportError, SystemError):
+except ModuleNotFoundError:
     from json.decoder import JSONDecodeError
 
 
 __all__ = [
-    'UnregisteredZoneError',
-    'ContradictoryZoneError',
-    'UnmatchZoneError',
-    'TietukuError',
+
     'JSONDecodeError',
+
+    'StackError',
+    'StackEmptyError',
+
+    'ConfigError',
     'NoConfigFileError',
     'NoConfigOptionError',
     'NoConfigSectionError',
+
+    'CoderError',
     'NoDocxFileError',
     'StaticServerTypeError',
+    'IllustrationTypeError',
     'MultiCountError',
+
+    'ZoneError',
+    'UnregisteredZoneError',
+    'ContradictoryZoneError',
+    'UnmatchZoneError',
+
+    'TietukuError',
+    'TietukuUploadError',
+
+    'SMMSError',
     'SMMSUploadError',
     'SMMSGetListError',
     'SMMSClearError',
 ]
 
 
+class StackError(Exception):
+    """ 堆栈类错误 """
+    pass
+
+class StackEmptyError(StackError):
+    """ 堆栈为空 """
+    pass
+
 
 class ConfigError(Exception):
-    """配置文件错误"""
+    """ 配置文件错误 """
     pass
 
 class NoConfigFileError(ConfigError):
-    """没有找到配置文件"""
+    """ 没有找到配置文件 """
     pass
 
 class NoConfigOptionError(ConfigError):
-    """没有找到配置项"""
+    """ 没有找到配置项 """
     pass
 
 class NoConfigSectionError(ConfigError):
-    """没有找到配置节"""
+    """ 没有找到配置节 """
     pass
-
 
 
 class CoderError(Exception):
-    """编码器错误"""
+    """ 编码器错误 """
     pass
 
 class NoDocxFileError(CoderError):
-    """没有找到docx文件"""
+    """ 没有找到docx文件 """
     pass
 
 class StaticServerTypeError(CoderError):
-    """未注册的图床类型"""
+    """ 未注册的图床类型 """
+    pass
+
+class IllustrationTypeError(CoderError):
+    """ 未注册的插图类型 """
     pass
 
 class MultiCountError(CoderError):
-    """同时统计字数和图片数"""
+    """ 同时统计字数和图片数 """
     pass
 
 
 class ZoneError(CoderError):
-    """模板区域错误"""
+    """ 模板区域错误 """
     pass
 
 class UnregisteredZoneError(ZoneError):
-    """未注册的区域名"""
+    """ 未注册的区域名 """
     pass
 
 class ContradictoryZoneError(ZoneError):
-    """读取的区域信息冲突，可能是区域名称不配对，或是区域标识符防止不合理"""
+    """ 读取的区域信息冲突，可能是区域名称不配对，或是区域标识符防止不合理 """
     pass
 
 class UnmatchZoneError(ZoneError):
-    """区域未闭合"""
+    """ 区域未闭合 """
     pass
-
 
 
 class TietukuError(Exception):
-    """贴图库api错误"""
+    """ 贴图库api错误 """
     pass
 
 class TietukuUploadError(TietukuError):
-    """调用上传图片的 api ，请求状态码非 200"""
+    """ 调用上传图片的 api ，请求状态码非 200 """
     pass
 
 
@@ -153,19 +178,19 @@ class TietukuUploadError(TietukuError):
 
 
 class SMMSError(Exception):
-    """SM.MS api 错误"""
+    """ SM.MS api 错误 """
     pass
 
 class SMMSUploadError(SMMSError):
-    """SM.MS 上传文件错误"""
+    """ SM.MS 上传文件错误 """
     pass
 
 class SMMSGetListError(SMMSError):
-    """SM.MS 获取文件列表错误"""
+    """ SM.MS 获取文件列表错误 """
     pass
 
 class SMMSClearError(SMMSError):
-    """SM.MS 清除文件列表错误"""
+    """ SM.MS 清除文件列表错误 """
     pass
 
 

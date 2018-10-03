@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 # filename: run.py
 
-__author__ = "Rabbit"
-__version__ = "1.0.6"
+
+__author__  = "Rabbit"
+__version__ = "1.0.7"
+__date__    = "2018.10.03"
 
 
 import sys
@@ -74,20 +76,11 @@ if __name__ == '__main__':
 										help="Whether this article has reporters information or not. (Default: False)")
 	group_coding_params.add_option("--has-reference", action="store_true", dest="has_reference",
 										help="Whether this article has references or not. (Default: False)")
-	group_coding_params.add_option("--count-word", action="store_true", dest="count_word",
-										help="Output word's sum. (Default: True)")
 	group_coding_params.add_option("--count-picture", action="store_true", dest="count_picture",
 										help="Output picture's sum. (Default: False)")
 
-	group_extend_functions = OptionGroup(parser,
-			title="Extended Options",
-			description="These options may be helpful to you.")
-	group_extend_functions.add_option("-e", "--extract-picture", action="store_true", dest="extract_picture",
-										help="Extract all pictures to 'project/build/images/' dir in sequence.")
-
 	parser.add_option_group(group_base)
 	parser.add_option_group(group_coding_params)
-	parser.add_option_group(group_extend_functions)
 
 	options, args = parser.parse_args()
 

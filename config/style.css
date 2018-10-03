@@ -20,6 +20,22 @@
     color: #3E3E3E;
 }
 
+.div-edtnote { /* 编者按的 box */
+    padding: 0px 10px;
+    line-height: 2;
+    font-size: 14px;
+    text-align: justify;
+    color: #3E3E3E;
+}
+
+.div-rptnote { /* 记者手记的 box */
+    padding: 0px 10px;
+    line-height: 2;
+    font-size: 14px;
+    text-align: justify;
+    color: #3E3E3E;
+}
+
 .div-tail { /* 文末部分的 box */
     padding: 0px 10px;
     line-height: 2;
@@ -89,8 +105,6 @@
 }
 
 .p-hr { /* 分割线段落 */
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
     line-height: 2;
     padding-bottom: 10px;
 }
@@ -129,4 +143,10 @@
 .hr { /* 分割线 */
     background-color: #A5A5A5;
     height: 1px;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.img {
+    max-width: 1024px;
 }

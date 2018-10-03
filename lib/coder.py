@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: coder.py
+# filename: lib/coder.py
 #
 # Docx 文档的解析类 / HTML 文档的编码类
 #
@@ -13,16 +13,16 @@ from zipfile import ZipFile
 from lxml import etree
 
 from tags import *
-from util import MD5, Logger, Config
+from util import Logger, Config, Stack
 from error import ContradictoryZoneError, UnmatchZoneError, UnregisteredZoneError, \
-                    MultiCountError, StaticServerTypeError
+                    MultiCountError, StaticServerTypeError, IllustrationTypeError
 
 
-Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 项目根目录
+Root_Dir = os.path.join(os.path.dirname(__file__), '../')   # 项目根目录
+Illustration_Dir = os.path.join(Root_Dir, "illustration/")  # 插图目录
 
 
 __all__ = ['HTMLCoder',]
-
 
 
 class DocxParser(object):
@@ -33,26 +33,20 @@ class DocxParser(object):
             class:
                 logger                  Logger            日志实例
                 config                  Config            配置文件实例
+                illustration            tuple             统一插图（编者按/记者手记）
             instance:
-                __static                  StaticAPI         静态文件 api 类的实例
-                __docx                  zipfile.ZipFile   docx 文件的 zipfile 对象
-                __imgMap                dict              存放 docx 文档中图片信息的映射
-                                                          rId: {
-                                                              filename: MD5文件名
-                                                              target: 图片在 docx 中的文件路径
-                                                              links: 文件外链
-                                                          }
+                staticServer            StaticAPI         静态文件 api 类的实例
+                docx                    zipfile.ZipFile   docx 文件的 zipfile 对象
+                imgLinks                dict              存放 docx 文档中图片的外链信息
                 documentXml             bytes             记录 docx 文档结构的 xml 文件
                 filename                str               去扩展名的 docx 文件名
                 Output_Dir              str               HTML 文档的生成目录
-                Extract_Pict            bool              附加参数：是否按顺序解压图片
             Raises:
                 StaticServerTypeError   非法的静态服务器类型
     """
-
     logger = Logger('docxparser')
     config = Config('coder.ini')
-
+    illustration = ("edtnote","rptnote")
 
     def __init__(self, file, output, **kwargs):
         """
@@ -66,62 +60,58 @@ class DocxParser(object):
 
         self.Output_Dir = output
         self.Extract_Pict = kwargs.get('extract_picture') or False
-        self.__static = self.__get_static_server(kwargs.get('static_server_type'))
-        self.__docx = ZipFile(file)
-        self.__imgMap = self.__get_img_map()
-        self.documentXml = self.__docx.read("word/document.xml")
-
-
-    @property
-    def filename(self):
-        return os.path.basename(self.__docx.filename)
-
+        self.staticServer = self.__get_static_server(kwargs.get('static_server_type'))
+        self.docx = ZipFile(file)
+        self.imgLinks = self.__get_img_map()
+        self.filename = os.path.basename(self.docx.filename)
+        self.documentXml = self.docx.read("word/document.xml")
 
     def __get_static_server(self, static_server_type=None):
         """ 确定图床类型，构造图床实例
         """
         sType = static_server_type or self.config.get('static.server', 'type')
         if sType == 'SM.MS':
-            from smms import SMMSAPI
-            return SMMSAPI()
+            from smms import SMMSAPI as StaticAPI
         elif sType == 'Tietuku':
-            from tietuku import TietukuAPI
-            return TietukuAPI()
+            from tietuku import TietukuAPI as StaticAPI
         elif sType == 'Elimage':
-            from elimage import ElimageAPI
-            return ElimageAPI()
+            from elimage import ElimageAPI as StaticAPI
         else:
             raise StaticServerTypeError("no such static server '%s' !" % sType)
+        return StaticAPI()
 
     def __get_img_map(self):
-        """ 构造 imgMap 属性
+        """ 构造 imgLinks 属性
+
+            Raises:
+                IllustrationTypeError    未注册的插图类型
         """
-        imgMap = {}
-        tree = etree.fromstring(self.__docx.read("word/_rels/document.xml.rels"))
+        imgLinks = {}
+
+        """ 上传文内图片 """
+        tree = etree.fromstring(self.docx.read("word/_rels/document.xml.rels"))
         for rel in tree.findall("Relationship", namespaces=tree.nsmap):
             if rel.get('Target')[:11] != 'media/image':
                 continue
             else:
                 _id, target = rel.get('Id'), rel.get('Target')
                 file = 'word/' + target # ZipFile 内部路径统一为 '/' 连接，此处不可用 os.path.join 连接，否则可能由于系统不同导致路径
-                imgBytes = self.__docx.read(file)
+                imgBytes = self.docx.read(file)
+                filename = os.path.basename(file)
+                links = self.staticServer.upload(filename, imgBytes, log=True)
+                imgLinks[_id] = links
 
-                if self.Extract_Pict: # 解压到 images/ 目录
-                    imgId, ext = os.path.splitext(os.path.basename(target))
-                    imgId = imgId[5:].zfill(3)  # 去掉 image 前缀, 补齐 3 位数
-                    imgFile = "{date}_{idx}{ext}".format(date=date.strftime(date.today(),"%y%m%d"),idx=imgId,ext=ext)
-                    imagesDir = os.path.abspath(os.path.join(self.Output_Dir, "images/"))
-                    if not os.path.exists(imagesDir):
-                        os.mkdir(imagesDir)
-                    with open(os.path.join(imagesDir, imgFile),"wb") as fp:
-                        fp.write(imgBytes)
-                    self.logger.info("extract image %s to %s" % (imgFile, imagesDir))
+        """ 上传通用插图 """
+        for filename in os.listdir(Illustration_Dir):
+            key, ext = os.path.splitext(filename)
+            if key not in self.illustration:
+                raise IllustrationTypeError("unregisted illustration type '%s' !" % key)
+            with open(os.path.join(Illustration_Dir, filename), "rb") as fp:
+                imgBytes = fp.read()
+            links = self.staticServer.upload(filename, imgBytes, log=True)
+            imgLinks[key] = links
 
-                filename = MD5(imgBytes) + os.path.splitext(file)[1]
-                links = self.__static.upload(filename, imgBytes, log=True)
-                imgMap[_id] = {"target": target, "filename": filename, "links": links}
-        return imgMap
-
+        return imgLinks
 
     def get_img_src(self, rId):
         """ 获得图片外链
@@ -131,8 +121,7 @@ class DocxParser(object):
             Returns:
                 src         str    图片外链
         """
-        return self.__imgMap[rId]['links']['url']
-
+        return self.imgLinks[rId]['url']
 
 
 class HTMLCoder(object):
@@ -155,16 +144,14 @@ class HTMLCoder(object):
                 Count_Word       bool                编码参数：是否统计字数，不可与 Count_Pict 同时为 True
                 Count_Pict       bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
     """
-
     logger = Logger('htmlcoder')
     config = Config('coder.ini')
 
-    zones = ("head","body","tail")
+    zones = ("ignore","head","body","tail","edtnote","rptnote")
 
     regex_comment = re.compile(r"^#") # 匹配注释
     regex_zone = re.compile(r"^[ ]*{%[ ]*(\S+)[ ]*%}.*$", re.I) # 匹配区域定义符 {% xxx %}
     regex_zoneEnd = re.compile(r"^end(\S+)$", re.I) # 匹配 {% endxxxx %}
-
 
     def __init__(self, file, output, **kwargs):
         """
@@ -187,9 +174,6 @@ class HTMLCoder(object):
         if kwargs.get('count_picture'):
             self.Count_Word = False
             self.Count_Pict = True
-        elif kwargs.get('count_word'):
-            self.Count_Word = True
-            self.Count_Pict = False
         else:
             self.Count_Word = self.config.getboolean('params', 'count_word')
             self.Count_Pict = self.config.getboolean('params', 'count_picture')
@@ -198,12 +182,14 @@ class HTMLCoder(object):
         self.__head = HeadBox()                  # 开头部分 box
         self.__body = BodyBox()                  # 正文部分 box
         self.__tail = TailBox()                  # 结尾部分 box
+        self.__edtNote = EdtNoteBox()            # 编者按 box
+        self.__rptNote = RptNoteBox()            # 记者手记 box
         self.__ref = RefBox()                    # 参考文献框 box
         self.__count = CountBox()                # 字数统计框 box
         self.__html = HTML(title=self.filename)  # 整体 HTML 文档
         self.__wordSum = 0                       # 字数统计
         self.__pictSum = 0                       # 图片统计
-        self.__nowZone = ''                      # 当前所在区域名称
+        self.__zoneSt = Stack()                  # 区域符堆栈
 
         if all([self.Count_Pict, self.Count_Word]): # 校验参数合理性
             raise MultiCountError("you can't count words and pictures at the same time !")
@@ -212,7 +198,6 @@ class HTMLCoder(object):
         Args:
             以下所有参数 p    均为 docx 段落的 lxml.etree._Element
     """
-
     def __is_bold(self, p):
         """ 判断当前段落是否为加粗段
 
@@ -226,7 +211,6 @@ class HTMLCoder(object):
             ns_w = "{%s}" % p.nsmap['w']
             val = b[0].get(ns_w+'val')
             return True if val is None or val != 'false' else False
-
 
     def __to_SBC_case(self, text):
         """ 转义 半角竖线/半角空格 => 全角竖线/全角空格
@@ -244,7 +228,6 @@ class HTMLCoder(object):
             text = SBC.join(w for w in text.split(DBC) if w != '') # 合并连续空格
         return text
 
-
     def __get_align(self, p):
         """ 获得当前段落的 对齐方式
 
@@ -258,7 +241,6 @@ class HTMLCoder(object):
             w_ns = "{%s}" % p.nsmap['w']
             return jc[0].get(w_ns+'val')
 
-
     def __find_img(self, p):
         """ 获得当前段落的图片节点
 
@@ -268,7 +250,6 @@ class HTMLCoder(object):
                 None  or  list => [lxml.etree._Element,]     lxml.etree.xpath 的搜索结果
         """
         return p.xpath('.//w:drawing | .//w:pict', namespaces=p.nsmap)
-
 
     def __get_img_src(self, p):
         """ 获得当前段落图片的外链
@@ -285,7 +266,6 @@ class HTMLCoder(object):
         elif p.xpath('.//w:pict', namespaces=p.nsmap):
             rId = img.xpath('.//*[@r:id]', namespaces=p.nsmap)[0].get(r_ns+'id')
         return self.docx.get_img_src(rId)
-
 
     def __is_next_to_img(self, p):
         """ 判断当前段落之前是否是图片段
@@ -306,7 +286,6 @@ class HTMLCoder(object):
             else:
                 continue
         return False # 找到头都是空行，这种情况理论上不会发生，因为并不会将图片放在文档开头
-
 
     def __get_read_time(self):
         """ 根据统计结果计算阅读时间，用于填充字数统计框
@@ -354,18 +333,26 @@ class HTMLCoder(object):
                 continue
             elif self.regex_zone.match(p.text):  # 再匹配区域定义符
                 self.__handle_zone(p)
-            elif self.__nowZone == 'head':
-                self.__handle_head(p)
-            elif self.__nowZone == 'body':
-                self.__handle_body(p)
-            elif self.__nowZone == 'tail':
-                self.__handle_tail(p)
-            else: # 非注释，非区域定义符，且不在任一区域内
+            elif self.__zoneSt.empty(): # 当前不在任何区域内
                 pass
+            elif self.__zoneSt.peek() == 'ignore': # 处在忽略段落
+                pass
+            elif self.__zoneSt.peek() == 'head':
+                self.__handle_head(p)
+            elif self.__zoneSt.peek() == 'body':
+                self.__handle_body(p)
+            elif self.__zoneSt.peek() == 'tail':
+                self.__handle_tail(p)
+            elif self.__zoneSt.peek() == 'edtnote':
+                self.__handle_edtnote(p)
+            elif self.__zoneSt.peek() == 'rptnote':
+                self.__handle_rptnote(p)
+            else: # 非注释，非区域定义符，堆栈非空，但不能匹配任何一种情况
+                raise Exception # 这种情况不应该出现
 
         """校验过程变量合理性"""
-        if self.__nowZone: # 区域未闭合
-            raise ContradictoryZoneError("{%% end%s %%} is missing" % self.__nowZone)
+        if not self.__zoneSt.empty(): # 区域未闭合
+            raise ContradictoryZoneError("{%% end%s %%} is missing" % self.__zoneSt.peek())
 
         """构造字数统计框"""
         if self.Count_Word:
@@ -387,35 +374,54 @@ class HTMLCoder(object):
 
         self.__tail + Br() # 最后插一行
 
-        """最后合并三个 box ，构造 HTML 文档"""
-        self.__html + WrapBox(self.__head) + WrapBox(self.__body) + WrapBox(self.__tail)
+        """先构造记者手记"""
+        if self.__rptNote.has_child():
+            self.__rptNote.insert(Img(self.docx.get_img_src("rptnote"))) # 记者手记四个字
+            self.__rptNote + PHr(Hr()) # 加一条分割线
 
+        """再构造编者按"""
+        if self.__edtNote.has_child():
+            self.__edtNote.insert(Img(self.docx.get_img_src("edtnote"))) # 编者按三个字
+            self.__edtNote + PHr(Hr()) # 加一条分割线
+
+        """最后合并 box ，构造 HTML 文档"""
+        self.__html + WrapBox(self.__head)
+        if self.__edtNote.has_child():
+            self.__html + WrapBox(self.__edtNote)
+        if self.__rptNote.has_child():
+            self.__html + WrapBox(self.__rptNote)
+        self.__html + WrapBox(self.__body) + WrapBox(self.__tail)
 
     def __handle_zone(self, p):
-        """ 区域定义符段的处理函数 """
+        """ 区域定义符段 """
         zoneText = self.regex_zone.match(p.text).group(1).lower()
         if self.regex_zoneEnd.match(zoneText): # 区域结尾
             zone = self.regex_zoneEnd.match(zoneText).group(1)
             if zone not in self.zones: # 非法区域
                 raise UnregisteredZoneError("unregisted zone %s in {%% %s %%}" % (zone, zoneText))
-            elif not self.__nowZone: # 不在该区域内
+            elif self.__zoneSt.empty(): # 不在任何区域内
                 raise ContradictoryZoneError("unexpected {%% end%s %%} , not in any zone now !" % zone)
-            elif zone != self.__nowZone: #不配对
-                raise UnmatchZoneError("{%% end%s %%} doesn't match current zone %s !" % (zone, self.__nowZone))
+            elif self.__zoneSt.peek() != "ignore" and zone != self.__zoneSt.peek(): #不配对
+                raise UnmatchZoneError("{%% end%s %%} doesn't match current zone %s !" % (zone, self.__zoneSt.peek()))
             else:
-                self.__nowZone = '' # 离开该区域
+                if self.__zoneSt.peek() == "ignore" and zone != "ignore":
+                    pass
+                else:
+                    item = self.__zoneSt.pop() # 离开该区域
+                    # self.logger.debug("<- %s" % item)
         else: # 区域开始
             zone = zoneText
             if zone not in self.zones: # 非法区域
                 raise UnregisteredZoneError("unregisted zone %s in {%% %s %%}" % (zone, zoneText))
-            elif self.__nowZone: # 仍在其他区域内
-                raise ContradictoryZoneError("{%% end%s %%} is missing above {%% %s %%}" % (self.__nowZone, zone))
             else:
-                self.__nowZone = zone # 进入该区域
-
+                if self.__zoneSt.peek() == "ignore":
+                    pass
+                else:
+                    # self.logger.debug("-> %s" % zone)
+                    self.__zoneSt.push(zone) # 进入该区域
 
     def __handle_head(self, p):
-        """ 开头段的处理函数 """
+        """ 开头段 """
         if self.No_Rpt: # 开头段只需要处理记者信息，没有记者信息则直接可以跳过
             pass
         elif p.text: # 记者信息，需转义半角
@@ -426,9 +432,8 @@ class HTMLCoder(object):
         else:
             pass
 
-
     def __handle_body(self, p):
-        """ 正文段的处理函数 """
+        """ 正文段 """
         if self.__find_img(p) != []: # 先找图
             if self.__is_next_to_img(p):
                 self.__body + Img(self.__get_img_src(p)) # 连续图片不空行
@@ -446,13 +451,12 @@ class HTMLCoder(object):
                 self.__body + PRNote(p.text) + Br()
             else: # 左对齐/两端对齐，正文
                 self.__body + P(p.text) + Br()
-            self.__wordSum += len(p.text) # 只有正文段的文字计入字数统计 ！
+            self.__wordSum += len(p.text) # 正文段的文字计入字数统计
         else:
             pass
 
-
     def __handle_tail(self, p):
-        """ 文末段的处理函数"""
+        """ 文末段 """
         if p.text:
             align = self.__get_align(p)
             if align == 'right': # 尾注，记者信息，需转义
@@ -468,6 +472,27 @@ class HTMLCoder(object):
         else:
             pass
 
+    def __handle_edtnote(self, p):
+        """ 编者按 """
+        if p.text:
+            align = self.__get_align(p)
+            if align == "right": # 记者署名
+                self.__edtNote + PRNote(p.text) + Br()
+            else: # 其他是正文
+                self.__edtNote + P(p.text) + Br()
+        else:
+            pass
+
+    def __handle_rptnote(self, p):
+        """ 记者手记 """
+        if p.text:
+            align = self.__get_align(p)
+            if align == "right": # 记者署名
+                self.__rptNote + PRNote(p.text) + Br()
+            else: # 其他是正文
+                self.__rptNote + P(p.text) + Br()
+        else:
+            pass
 
     def work(self):
         """ 编码的外部接口函数"""

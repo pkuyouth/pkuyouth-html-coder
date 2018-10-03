@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: tags.py
+# filename: lib/tags.py
 #
 # 自定义的 HTML 节点类
 #
@@ -19,7 +19,7 @@ __all__ = [
     'span',\
     'Br','Hr','Img','H1','R15','R16','NSyb',\
     'P','PRNote','ImgNote','PEndNote','PCount','PRpt','PRef','PHr',\
-    'HeadBox','BodyBox','TailBox','CountBox','RefBox','WrapBox',\
+    'HeadBox','BodyBox','TailBox','EdtNoteBox','RptNoteBox','CountBox','RefBox','WrapBox',\
     'HTML',\
 ]
 
@@ -98,11 +98,8 @@ class Tag(Node):
                 attrib    dict   标签属性值，包含 class 和 style
                 children  list   以 Node 为基础类定义的子节点列表
     """
-
-
     tag = ''
     class_ = ''
-
 
     def __init__(self, *args, bold=False):
         """
@@ -121,7 +118,6 @@ class Tag(Node):
             for child in args:
                 self.append(child, bold=bold)
 
-
     def __to_child_node(self, child, *args, bold=False):
         """ 将 __init__ 传入节点解析为 Node 节点
 
@@ -137,8 +133,12 @@ class Tag(Node):
         elif isinstance(child, (str,int,float)):
             return Text(child, bold=bold)
         else:
-            raise TypeError("children of Tag must be a (int,str,float) or Node type, not %s !" % type(child))
+            raise TypeError("children of Tag must be a (str,int,float) or Node type, not %s !" % type(child))
 
+    def has_child(self):
+        """ 是否拥有子节点
+        """
+        return len(self.children) > 0
 
     def insert(self, *args, index=0, bold=False):
         """ 类似于 list.insert ，在 children 列表中特定位置顺序添加若干子节点
@@ -154,7 +154,6 @@ class Tag(Node):
             self.children.insert(index, self.__to_child_node(child, bold=bold))
         return self
 
-
     def append(self, *args, bold=False):
         """ 类似于 list.append ，在 children 列表后顺序插入若干子节点
 
@@ -167,7 +166,6 @@ class Tag(Node):
         for child in args:
             self.children.append(self.__to_child_node(child, bold=bold))
         return self
-
 
     def pop(self, node=None):
         """ 类似于 list.pop ，从 children 列表中删除特定类型的 Node
@@ -188,29 +186,15 @@ class Tag(Node):
                         self.children.pop(-idx-1)
                         return self
 
-
     def __add__(self, child):
         """ 操作符 + 重载，append 的快捷方式
-
-            Args:
-                *args   str / Node   顺序添加的子节点
-                bold    bool         是否加粗，对应传给 Text 节点
-            Returns:
-                self    Node         返回本身，用于进行连续操作
         """
         return self.append(child)
 
-
-    def __sub__(self, node=None):
+    def __sub__(self, node):
         """ 操作符 - 重载，pop 的快捷方式
-
-            Args:
-                node    None / class Node    需要删除的节点类型，如果为 None 则删除 children 列表最后一个节点
-            Returns:
-                self    Node                 返回本身，用于进行连续操作
         """
-        return self.pop(node=node)
-
+        return self.pop(node)
 
     def render(self):
         """ 渲染成对应的 lxml 对象
@@ -219,7 +203,6 @@ class Tag(Node):
                 lxml.etree._Element
         """
         return E(self.tag, self.attrib, *list(child.render() for child in self.children))
-
 
     def print_out(self, **kwargs):
         """ 渲染成 html 文档输出
@@ -255,6 +238,7 @@ class br(Tag):
 
 class img(Tag):
     tag = 'img'
+    class_ = 'img'
 
     def __init__(self, src):
         """
@@ -364,6 +348,12 @@ class BodyBox(section):
 class TailBox(section):
     class_ = 'div-tail'
 
+class EdtNoteBox(section):
+    class_ = 'div-edtnote'
+
+class RptNoteBox(section):
+    class_ = 'div-rptnote'
+
 class RefBox(section):
     class_ = 'div-ref'
 
@@ -381,7 +371,6 @@ class WrapBox(section):
 """
     特殊的组件，HTML 文档的模板组件
 """
-
 
 class HTML(Tag):
     """

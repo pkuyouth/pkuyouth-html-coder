@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: elimage.py
+# filename: lib/elimage.py
 #
 # elimage api 类
 #
@@ -13,7 +13,7 @@ from io import BytesIO
 from functools import partial
 import requests
 
-from util import json_dump, json_load, MD5, Logger, Config
+from util import json_dump, json_load, MD5, SHA1, Logger, Config
 from error import JSONDecodeError, SMMSUploadError, SMMSGetListError, SMMSClearError
 
 
@@ -35,7 +35,7 @@ class ElimageAPI(object):
                 logger                   Logger    日志实例
                 config                   Config    配置文件实例
                 Image_Links_Cache_JSON   str       图片外链 json 缓存文件名
-                imgLinks                 dict      图片名与图片外链的映射
+                imgLinks                 dict      图片 sha1 与图片外链的映射
     """
 
     logger = Logger('elimage')
@@ -52,17 +52,19 @@ class ElimageAPI(object):
         """ 图片上传接口
 
             Args:
-                filename    str      图片名
-                imgBytes    bytes    图片的 bytes
-                log         bool     是否输出日志
+                filename    str     图片名
+                imgBytes    bytes   图片的 bytes
+                log         bool    是否输出日志
             Returns:
-                links       dict     该文件的外链信息 {
+                links       dict    该文件的外链信息 {
                                         'url': 图片链接
-                                        'md5': 图片MD5
+                                        'md5': 图片 MD5
+                                        'sha1': 图片 SHA1
                                     }
         """
-
-        links = self.imgLinks.get(filename)
+        imgMD5 = MD5(imgBytes)
+        imgSHA1 = SHA1(imgBytes)
+        links = self.imgLinks.get(imgSHA1)
         if links is not None:
             if log:
                 self.logger.info('get image %s from cache' % filename)
@@ -72,13 +74,15 @@ class ElimageAPI(object):
                 self.logger.info('uploading image %s' % filename)
 
             resp = requests.post('https://img.vim-cn.com/', files={
-                    'image': (filename, BytesIO(imgBytes))
+                    'image': (imgSHA1 + os.path.splitext(filename)[1], BytesIO(imgBytes))
                 })
 
             links = {
                 'url': resp.text.rstrip('\n'),
-                'md5': MD5(imgBytes),
+                'md5': imgMD5,
+                'sha1': imgSHA1,
             }
-            self.imgLinks[filename] = links
+            self.imgLinks[imgSHA1] = links
             json_dump(self.Image_Links_Cache_JSON, self.imgLinks) # 缓存
             return links
+

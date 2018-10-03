@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: tietuku.py
+# filename: lib/tietuku.py
 #
 # 贴图库 api 类
 #
@@ -12,7 +12,7 @@ from io import BytesIO
 from functools import partial
 import requests
 
-from util import json_dump, json_load, MD5, Logger, Config
+from util import json_dump, json_load, MD5, SHA1, Logger, Config
 from error import JSONDecodeError, TietukuUploadError
 
 
@@ -38,7 +38,7 @@ class TietukuAPI(object):
                 aid                      int       图库 ID
                 Validity_Period          int       图片有效期
                 Image_Links_Cache_JSON   str       图片外链 json 缓存文件名
-                imgLinks                 dict      图片名与图片外链的映射
+                imgLinks                 dict      图片 sha1 与图片外链的映射
     """
 
     logger = Logger('tietuku')
@@ -47,7 +47,7 @@ class TietukuAPI(object):
     token = config.get('account', 'token')
     aid = config.getint('account', 'aid')
 
-    Validity_Period = config.getint('cache', 'cache_time') # 默认缓存 1h
+    Validity_Period = config.getint('cache', 'cache_time')
     # Validity_Period = 24*60*60*(7-1) # 实际 7 天过期，自定义 6 天即不能用
     Image_Links_Cache_JSON = config.get('cache', 'image_links_json')
 
@@ -61,14 +61,15 @@ class TietukuAPI(object):
         """ 图片上传接口
 
             Args:
-                filename    str      图片名
-                imgBytes    bytes    图片的 bytes
-                log         bool     是否输出日志
+                filename    str     图片名
+                imgBytes    bytes   图片的 bytes
+                log         bool    是否输出日志
             Returns:
-                links       dict     该文件的外链信息 {
-                                        'url': 图片链接
-                                        'md5': 图片MD5
-                                        'expire_time': 图片过期的Unix时间/s
+                links       dict    该文件的外链信息 {
+                                       'url': 图片链接
+                                       'md5': 图片 MD5
+                                       'sha1': 图片 SHA1
+                                       'expire_time': 图片过期的 Unix 时间/s
                                     }
             Raises:
                 TietukuUploadError   图片上传错误，请求状态码非 200 可以查询 code 字段的信息
@@ -95,7 +96,9 @@ class TietukuAPI(object):
                 "info": "\u76f8\u518c\u4e0d\u5b58\u5728\u6216\u5df2\u7ecf\u5220\u9664"
             }
         """
-        links = self.imgLinks.get(filename)
+        imgMD5 = MD5(imgBytes)
+        imgSHA1 = SHA1(imgBytes)
+        links = self.imgLinks.get(imgSHA1)
         if links is not None and links['expire_time'] > time.time():
             if log:
                 self.logger.info('get image %s from cache' % filename)
@@ -109,7 +112,7 @@ class TietukuAPI(object):
                 'aid': self.aid,
                 'from': 'file', # 可选项 file 或 web ，表示上传的图片来自 本地/网络
             }, files={
-                'file': (filename, BytesIO(imgBytes)),
+                'file': (imgSHA1 + os.path.splitext(filename)[1], BytesIO(imgBytes)),
             })
             if resp.status_code != requests.codes.ok:
                 raise TietukuUploadError('[status %d] %s' % (resp.status_code, resp.text))
@@ -120,10 +123,10 @@ class TietukuAPI(object):
                     # "o_url": respJson['linkurl'], # 原始图
                     # "s_url": respJson['s_url'],   # 展示图
                     # "t_url": respJson['t_url'],   # 缩略图
-                    "md5": MD5(imgBytes),
+                    "md5": imgMD5,
+                    "sha1": imgSHA1,
                     "expire_time": int(time.time() + self.Validity_Period) # 用于校验图片有效性
                 }
-                self.imgLinks[filename] = links
+                self.imgLinks[imgSHA1] = links
                 json_dump(self.Image_Links_Cache_JSON, self.imgLinks) # 缓存
                 return links
-

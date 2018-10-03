@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: util.py
+# filename: lib/util.py
 #
 # 通用的 function / class
 #
@@ -12,10 +12,9 @@ import logging
 import hashlib
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 
-
 try:
     import simplejson as json
-except (ImportError, SystemError):
+except ModuleNotFoundError:
     import json
 
 from error import NoConfigFileError, NoConfigOptionError, NoConfigSectionError
@@ -30,44 +29,41 @@ __all__ = [
     'json_load',
     'json_dump',
     'MD5',
+    'SHA1',
 
     'Logger',
     'Config',
+    'Stack',
 ]
 
 
-
-def __to_hash(hashlib_fn, data):
-    """ hashlib 函数的通用模板
+def to_bytes(data):
+    """ str -> bytes
 
         Args:
-            hashlib_fn    function    hashlib 的函数接口
-            data          bytes/str/int/float    待 hash 化的数据
+            data    bytes/str/int/float    origin
         Returns:
-            str     32 位的 MD5 hash 值
-        Raises:
-            TypeError     data 类型非法
+            bytes   bytes
     """
     if isinstance(data, bytes):
-        pass
+        return data
     elif isinstance(data, (str, int, float)):
-        data = str(data).encode('utf-8')
+        return str(data).encode('utf-8')
     else:
         raise TypeError('unsupported type %s' % type(data))
-    return hashlib_fn(data).hexdigest()
 
 
-""" hashlib.md5 函数的封装
+""" hashlib 函数的封装
 
     Args:
-        data    bytes/str/int/float    待 hash 化的数据
+        data    bytes/str/int/float    待 hash 的数据
     Returns:
-        str     32 位的 MD5 hash 值
+        hashString    hash 值
     Raises:
         TypeError     data 类型非法
 """
-MD5 = lambda data: __to_hash(hashlib.md5, data)
-
+MD5 = lambda data: hashlib.md5(to_bytes(data)).hexdigest()
+SHA1 = lambda data: hashlib.sha1(to_bytes(data)).hexdigest()
 
 
 def json_load(folder, filename, **kwargs):
@@ -81,7 +77,8 @@ def json_load(folder, filename, **kwargs):
             object             json 文件反序列化的 python 序列对象
     """
     file = os.path.join(folder, filename)
-    return json.load(open(file, 'r'), **kwargs)
+    return json.load(open(file, 'r', encoding="utf-8-sig"), **kwargs)
+
 
 def json_dump(folder, filename, data, **kwargs):
     """ json.dump 函数的封装
@@ -93,8 +90,7 @@ def json_dump(folder, filename, data, **kwargs):
             **kwargs             传给 json.dump 函数的参数，例如 indent = 4
     """
     file = os.path.join(folder, filename)
-    json.dump(data, open(file, 'w'), ensure_ascii=True, **kwargs)
-
+    json.dump(data, open(file, 'w', encoding="utf-8"), ensure_ascii=True, **kwargs)
 
 
 class Logger(object):
@@ -108,7 +104,6 @@ class Logger(object):
                 format           logging.Formatter      日志格式
                 console_headler  logging.StreamHandler  控制台日志 handler
     """
-
     Default_Name = 'htmlcoder'
 
     def __init__(self, name=None):
@@ -145,7 +140,6 @@ class Logger(object):
         以下是对 logging 的五种 level 输出函数的封装
         并定义 __call__ = logging.info
     """
-
     def debug(self, *args, **kwargs):
         return self.logger.debug(*args, **kwargs)
 
@@ -165,7 +159,6 @@ class Logger(object):
         return self.info(*args, **kwargs)
 
 
-
 class Config(object):
     """ [配置文件类，configparser 模块的封装]
 
@@ -180,7 +173,7 @@ class Config(object):
         else:
             self.ini = ini
             self.__config = RawConfigParser(allow_no_value=True)
-            self.__config.read(file, encoding="utf-8")
+            self.__config.read(file, encoding="utf-8-sig")
 
     def __getitem__(self, key):
         """ 内部实例 __config 的 __getitem__ 方法的传递
@@ -230,7 +223,6 @@ class Config(object):
     """
         下面是对 get/getint/getfloat/getboolean 四种 config.get 函数的封装
     """
-
     def get(self, section, option):
         return self.__get(self.__config.get, section, option)
 
@@ -242,3 +234,39 @@ class Config(object):
 
     def getboolean(self, section, option):
         return self.__get(self.__config.getboolean, section, option)
+
+
+class Stack(object):
+    """ 堆栈类 """
+
+    def __init__(self, *args):
+        self._items = list(args)
+
+    def size(self):
+        """ 堆栈内元素个数
+        """
+        return len(self._items)
+
+    def empty(self):
+        """ 判断你是否为空
+        """
+        return self.size() == 0
+
+    def push(self, item):
+        """ 压入一个元素
+        """
+        self._items.append(item)
+
+    def pop(self):
+        """ 弹出一个元素
+        """
+        if self.empty():
+            raise StackEmptyError("no element !")
+        return self._items.pop()
+
+    def peek(self):
+        """ 查看下一个被弹出元素
+        """
+        if self.empty():
+            return None
+        return self._items[-1]

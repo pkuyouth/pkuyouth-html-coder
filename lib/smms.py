@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: smms.py
+# filename: lib/smms.py
 #
 # SM.MS api 类
 #
@@ -14,7 +14,7 @@ from io import BytesIO
 from functools import partial
 import requests
 
-from util import json_dump, json_load, MD5, Logger, Config
+from util import json_dump, json_load, MD5, SHA1, Logger, Config
 from error import JSONDecodeError, SMMSUploadError, SMMSGetListError, SMMSClearError
 
 
@@ -37,9 +37,8 @@ class SMMSAPI(object):
                 config                   Config    配置文件实例
                 api                      dict      API 接口
                 Image_Links_Cache_JSON   str       图片外链 json 缓存文件名
-                imgLinks                 dict      图片名与图片外链的映射
+                imgLinks                 dict      图片 sha1 与图片外链的映射
     """
-
     logger = Logger('SM.MS')
     config = Config('smms.ini')
 
@@ -61,14 +60,15 @@ class SMMSAPI(object):
         """ 图片上传接口
 
             Args:
-                filename    str      图片名
-                imgBytes    bytes    图片的 bytes
-                log         bool     是否输出日志
+                filename    str     图片名
+                imgBytes    bytes   图片的 bytes
+                log         bool    是否输出日志
             Returns:
-                links       dict     该文件的外链信息 {
-                                        'url': 图片链接
-                                        'md5': 图片MD5
-                                        'delete': 删除图片链接
+                links       dict    该文件的外链信息 {
+                                       'url': 图片链接
+                                       'md5': 图片 MD5
+                                       'sha1': 图片 SHA1
+                                       'delete': 删除图片链接
                                     }
             Raises:
                 SMMSUploadError      code 字段非 'success'
@@ -89,7 +89,9 @@ class SMMSAPI(object):
             path    String  /2015/10/13/561cfc3282a13.png   图片的相对地址
             msg String  No files were uploaded. 上传图片出错时将会出现
         """
-        links = self.imgLinks.get(filename)
+        imgMD5 = MD5(imgBytes)
+        imgSHA1 = SHA1(imgBytes)
+        links = self.imgLinks.get(imgSHA1)
         if links is not None:
             if log:
                 self.logger.info('get image %s from cache' % filename)
@@ -99,7 +101,7 @@ class SMMSAPI(object):
                 self.logger.info('uploading image %s' % filename)
 
             respJson = requests.post(self.api['upload'], files={
-                    'smfile': (filename, BytesIO(imgBytes)),
+                    'smfile': (imgSHA1 + os.path.splitext(filename)[1], BytesIO(imgBytes)),
                 }).json()
 
             code = respJson.get('code')
@@ -108,10 +110,11 @@ class SMMSAPI(object):
                 data = respJson['data']
                 links = {
                     'url': data['url'],
-                    'md5': MD5(imgBytes),
+                    'md5': imgMD5,
+                    'sha1': imgSHA1,
                     'delete': data['delete'],
                 }
-                self.imgLinks[filename] = links
+                self.imgLinks[imgSHA1] = links
                 json_dump(self.Image_Links_Cache_JSON, self.imgLinks) # 缓存
                 return links
             elif code == 'error':

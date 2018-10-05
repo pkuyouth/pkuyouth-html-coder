@@ -5,20 +5,18 @@
 # 贴图库 api 类
 #
 
-
 import os
 import time
 from io import BytesIO
 from functools import partial
 import requests
 
-from util import json_dump, json_load, MD5, SHA1, Logger, Config
-from error import JSONDecodeError, TietukuUploadError
+from utils import json_dump, json_load, MD5, SHA1, Logger, Config
+from errors import JSONDecodeError, TietukuUploadError
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 项目根目录
 Cache_Dir = os.path.join(Root_Dir, "cache/") # 缓存文件目录
-
 
 json_dump = partial(json_dump, Cache_Dir)
 json_load = partial(json_load, Cache_Dir)

@@ -5,7 +5,6 @@
 # 自定义错误类
 #
 
-
 try:
     from simplejson.errors import JSONDecodeError
 except ModuleNotFoundError:
@@ -28,7 +27,11 @@ __all__ = [
     'NoDocxFileError',
     'StaticServerTypeError',
     'IllustrationTypeError',
-    'MultiCountError',
+    'MultiCountConflictError',
+    'MultiPictureConflictError',
+    'ParamKeyError',
+    'ParamValueError',
+    'ParamDefineTooLateError',
 
     'ZoneError',
     'UnregisteredZoneError',
@@ -87,8 +90,24 @@ class IllustrationTypeError(CoderError):
     """ 未注册的插图类型 """
     pass
 
-class MultiCountError(CoderError):
+class MultiCountConflictError(CoderError):
     """ 同时统计字数和图片数 """
+    pass
+
+class MultiPictureConflictError(CoderError):
+    """ 单段内图片不唯一 """
+    pass
+
+class ParamKeyError(CoderError):
+    """ 参数名未定义 """
+    pass
+
+class ParamValueError(CoderError):
+    """ 参数值非预设 """
+    pass
+
+class ParamDefineTooLateError(CoderError):
+    """ 参数指定过晚，已进入编码区域 """
     pass
 
 

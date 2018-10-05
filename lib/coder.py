@@ -5,7 +5,6 @@
 # Docx 文档的解析类 / HTML 文档的编码类
 #
 
-
 import os
 import re
 from datetime import date
@@ -13,9 +12,12 @@ from zipfile import ZipFile
 from lxml import etree
 
 from tags import *
-from util import Logger, Config, Stack
-from error import ContradictoryZoneError, UnmatchZoneError, UnregisteredZoneError, \
-                    MultiCountError, StaticServerTypeError, IllustrationTypeError
+from utils import Logger, Config, Stack
+from errors import (
+        ContradictoryZoneError, UnmatchZoneError, UnregisteredZoneError, MultiCountConflictError,
+        StaticServerTypeError, IllustrationTypeError, MultiPictureConflictError, ParamKeyError,
+        ParamValueError, ParamDefineTooLateError
+    )
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../')   # 项目根目录
@@ -38,6 +40,7 @@ class DocxParser(object):
                 staticServer            StaticAPI         静态文件 api 类的实例
                 docx                    zipfile.ZipFile   docx 文件的 zipfile 对象
                 imgLinks                dict              存放 docx 文档中图片的外链信息
+                styleMap                dict              存放 docx 文档中样式表信息
                 documentXml             bytes             记录 docx 文档结构的 xml 文件
                 filename                str               去扩展名的 docx 文件名
                 Output_Dir              str               HTML 文档的生成目录
@@ -59,10 +62,10 @@ class DocxParser(object):
         self.logger.info('parse %s' % os.path.abspath(file)) # 打日志
 
         self.Output_Dir = output
-        self.Extract_Pict = kwargs.get('extract_picture') or False
         self.staticServer = self.__get_static_server(kwargs.get('static_server_type'))
         self.docx = ZipFile(file)
-        self.imgLinks = self.__get_img_map()
+        self.imgLinks = self.__get_img_links()
+        self.styleMap = self.__get_style_map()
         self.filename = os.path.basename(self.docx.filename)
         self.documentXml = self.docx.read("word/document.xml")
 
@@ -80,7 +83,7 @@ class DocxParser(object):
             raise StaticServerTypeError("no such static server '%s' !" % sType)
         return StaticAPI()
 
-    def __get_img_map(self):
+    def __get_img_links(self):
         """ 构造 imgLinks 属性
 
             Raises:
@@ -89,12 +92,12 @@ class DocxParser(object):
         imgLinks = {}
 
         """ 上传文内图片 """
-        tree = etree.fromstring(self.docx.read("word/_rels/document.xml.rels"))
-        for rel in tree.findall("Relationship", namespaces=tree.nsmap):
-            if rel.get('Target')[:11] != 'media/image':
+        root = etree.fromstring(self.docx.read("word/_rels/document.xml.rels"))
+        for eRel in root.findall("Relationship", namespaces=root.nsmap):
+            if eRel.get('Target')[:11] != 'media/image':
                 continue
             else:
-                _id, target = rel.get('Id'), rel.get('Target')
+                _id, target = eRel.get('Id'), eRel.get('Target')
                 file = 'word/' + target # ZipFile 内部路径统一为 '/' 连接，此处不可用 os.path.join 连接，否则可能由于系统不同导致路径
                 imgBytes = self.docx.read(file)
                 filename = os.path.basename(file)
@@ -112,6 +115,15 @@ class DocxParser(object):
             imgLinks[key] = links
 
         return imgLinks
+
+    def __get_style_map(self):
+        styleMap = {}
+        root = etree.fromstring(self.docx.read("word/styles.xml"))
+        for eStyle in root.findall("w:style", namespaces=root.nsmap):
+            ns_w = "{%s}" % root.nsmap['w']
+            styleId = eStyle.get(ns_w+'styleId')
+            styleMap[styleId] = eStyle
+        return styleMap
 
     def get_img_src(self, rId):
         """ 获得图片外链
@@ -132,25 +144,33 @@ class HTMLCoder(object):
                 logger           Logger              日志实例
                 config           Config              配置文件实例
                 zones            tuple               注册的合法区域
+                params           tuple               注册合法参数名
+                trueValues       tuple               注册参数真值
+                falseValues      tuple               注册参数非真值
                 regex_comment    _sre.SRE_Pattern    正则表达式，匹配注释
+                regex_param      _sre.SRE_Pattern    正则表达式，匹配参数设置符
                 regex_zone       _sre.SRE_Pattern    正则表达式，匹配区域定义符
                 regex_zoneEnd    _sre.SRE_Pattern    正则表达式，匹配区域结尾定义符
             instance:
                 docx             DocxParser          DocxParser 实例
                 filename         str                 去拓展名的 docx 文件名
                 Output_Dir       str                 HTML 文档的生成目录
-                No_Rpt           bool                编码参数：是否有记者信息
-                Has_Ref          bool                编码参数：是否有参考文献
-                Count_Word       bool                编码参数：是否统计字数，不可与 Count_Pict 同时为 True
-                Count_Pict       bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
+                No_Reporter      bool                编码参数：是否有记者信息
+                Has_Reference    bool                编码参数：是否有参考文献
+                Count_Word       bool                编码参数：是否统计字数，不可与 Count_Picture 同时为 True
+                Count_Picture    bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
     """
     logger = Logger('htmlcoder')
     config = Config('coder.ini')
 
     zones = ("ignore","head","body","tail","edtnote","rptnote")
+    params = ("No_Reporter","Has_Reference","Count_Picture")
+    trueValues = ("True","true","1")
+    falseValues = ("False","false","0")
 
-    regex_comment = re.compile(r"^#") # 匹配注释
-    regex_zone = re.compile(r"^[ ]*{%[ ]*(\S+)[ ]*%}.*$", re.I) # 匹配区域定义符 {% xxx %}
+    regex_comment = re.compile(r"^#") # 匹配注释 # ...
+    regex_param = re.compile(r"^@\s*(\S+)\s*=\s*(\S+).*$", re.I) # 匹配参数设置符 @ key = value
+    regex_zone = re.compile(r"^\s*{%\s*(\S+)\s*%}.*$", re.I) # 匹配区域定义符 {% xxx %}
     regex_zoneEnd = re.compile(r"^end(\S+)$", re.I) # 匹配 {% endxxxx %}
 
     def __init__(self, file, output, **kwargs):
@@ -160,7 +180,7 @@ class HTMLCoder(object):
                 output    str      html 文档的输出路径
                 **kwargs           来自命令行的参数设置
             Raises:
-                MultiCountError    同时统计字数和图片数
+                MultiCountConflictError    同时统计字数和图片数
         """
 
         self.docx = DocxParser(file, output=output, **kwargs)
@@ -168,15 +188,15 @@ class HTMLCoder(object):
         self.Output_Dir = output
 
         """ 编码参数"""
-        self.No_Rpt = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
-        self.Has_Ref = kwargs.get('has_reference') or self.config.getboolean('params', 'has_reference')
+        self.No_Reporter = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
+        self.Has_Reference = kwargs.get('has_reference') or self.config.getboolean('params', 'has_reference')
 
         if kwargs.get('count_picture'):
             self.Count_Word = False
-            self.Count_Pict = True
+            self.Count_Picture = True
         else:
             self.Count_Word = self.config.getboolean('params', 'count_word')
-            self.Count_Pict = self.config.getboolean('params', 'count_picture')
+            self.Count_Picture = self.config.getboolean('params', 'count_picture')
 
         """ 过程变量"""
         self.__head = HeadBox()                  # 开头部分 box
@@ -190,27 +210,72 @@ class HTMLCoder(object):
         self.__wordSum = 0                       # 字数统计
         self.__pictSum = 0                       # 图片统计
         self.__zoneSt = Stack()                  # 区域符堆栈
-
-        if all([self.Count_Pict, self.Count_Word]): # 校验参数合理性
-            raise MultiCountError("you can't count words and pictures at the same time !")
+        self.__inPreZone = True                  # 是否尚未进入任何区域
 
     """
         Args:
-            以下所有参数 p    均为 docx 段落的 lxml.etree._Element
+            以下所有参数 p, ele, ...    均为 docx 段落的 lxml.etree._Element
     """
+
     def __is_bold(self, p):
-        """ 判断当前段落是否为加粗段
+        """ 判断当前段落是否为加粗段，同时考虑样式表的定义和段落内定义
 
             Returns:
-                True / False    bool
+                True/False    bool
         """
-        b = p.xpath('.//w:b', namespaces=p.nsmap)
-        if b == []:
-            return False
-        else:
-            ns_w = "{%s}" % p.nsmap['w']
-            val = b[0].get(ns_w+'val')
-            return True if val is None or val != 'false' else False
+        bold = False # 默认为 False
+        w_ns = "{%s}" % p.nsmap['w']
+        for eStyle in p.xpath('.//w:pStyle | .//w:rStyle', namespaces=p.nsmap):
+            styleId = eStyle.get(w_ns+'val')
+            eStyle = self.docx.styleMap[styleId]
+            _bold = self.__real_is_bold(eStyle)
+            bold = _bold if _bold is not None else bold
+        _bold = self.__real_is_bold(p)
+        return _bold if _bold is not None else bold # 如果 p 定义了加粗则返回 p 的定义，否则返回 style 的定义
+
+    def __real_is_bold(self, ele):
+        """ 真正用来判断传入元素是否将该段落定义为加粗
+
+            Returns:
+                True/False/None    bool/None    如果没有找到 w:b 字段，则返回 None 否则 bool
+        """
+        bs = ele.xpath('.//w:rPr/w:b', namespaces=ele.nsmap) # w:b 位于 w:rPr 内
+        if bs == []:
+            return None
+        else: # 还需判断其 w:val 是否为 'false'
+            ns_w = "{%s}" % ele.nsmap['w']
+            bold = True # 默认为 True
+            for b in bs: # w:rPr 类似于 span 标签，一段内不一定唯一，但此处只考虑最后一个 w:b
+                val = b.get(ns_w+'val')
+                bold = False if val == 'false' else True
+            return bold
+
+    def __get_align(self, p):
+        """ 获得当前段落的对齐方式，同时考虑样式表定义和段落内定义
+
+            Returns:
+                align    str    返回值有 left/right/justify ...
+        """
+        align = "left" # 默认左对齐
+        w_ns = "{%s}" % p.nsmap['w']
+        for eStyle in p.xpath('.//w:pStyle', namespaces=p.nsmap): # w:jc 位于 w:pStyle 内
+            styleId = eStyle.get(w_ns+'val')
+            eStyle = self.docx.styleMap[styleId]
+            align = self.__real_get_align(eStyle) or align
+        return self.__real_get_align(p) or align
+
+    def __real_get_align(self, ele):
+        """ 真正用来判断当前段落
+
+            Returns:
+                align    str/None    无 w:jc 返回 None ，否则 left/right/justify ...
+        """
+        jc = ele.xpath('.//w:pPr/w:jc', namespaces=ele.nsmap) # w:jc 位于 w:pPr 内
+        if jc == []:
+            return None
+        else: # w:pPr 类似于 p 标签属性，段内唯一
+            w_ns = "{%s}" % ele.nsmap['w']
+            return jc[0].get(w_ns+'val') # 因此，如果找到，则必定只有一个
 
     def __to_SBC_case(self, text):
         """ 转义 半角竖线/半角空格 => 全角竖线/全角空格
@@ -228,19 +293,6 @@ class HTMLCoder(object):
             text = SBC.join(w for w in text.split(DBC) if w != '') # 合并连续空格
         return text
 
-    def __get_align(self, p):
-        """ 获得当前段落的 对齐方式
-
-            Returns:
-                align    str    返回值有 left/right/justify ...
-        """
-        jc = p.xpath('.//w:jc', namespaces=p.nsmap)
-        if jc == []:
-            return 'left' # 默认左对齐
-        else:
-            w_ns = "{%s}" % p.nsmap['w']
-            return jc[0].get(w_ns+'val')
-
     def __find_img(self, p):
         """ 获得当前段落的图片节点
 
@@ -249,7 +301,7 @@ class HTMLCoder(object):
             Returns:
                 None  or  list => [lxml.etree._Element,]     lxml.etree.xpath 的搜索结果
         """
-        return p.xpath('.//w:drawing | .//w:pict', namespaces=p.nsmap)
+        return p.xpath('.//w:drawing//*[@r:embed] | .//w:pict//*[@r:id]', namespaces=p.nsmap)
 
     def __get_img_src(self, p):
         """ 获得当前段落图片的外链
@@ -259,12 +311,11 @@ class HTMLCoder(object):
             Returns:
                 src    str    当前段落图片的外链
         """
-        img = self.__find_img(p)[0]
+        imgs = self.__find_img(p) # 实际上应该唯一
+        if len(imgs) > 1: # 如果以行内图片不唯一，则报错
+            raise MultiPictureConflictError("don't place %s pictrues in the same paragraph !" % len(imgs))
         r_ns = "{%s}" % p.nsmap['r']
-        if p.xpath('.//w:drawing', namespaces=p.nsmap):
-            rId = img.xpath('.//*[@r:embed]', namespaces=p.nsmap)[0].get(r_ns+'embed')
-        elif p.xpath('.//w:pict', namespaces=p.nsmap):
-            rId = img.xpath('.//*[@r:id]', namespaces=p.nsmap)[0].get(r_ns+'id')
+        rId = imgs[0].get(r_ns+'embed') or img.get(r_ns+'id')
         return self.docx.get_img_src(rId)
 
     def __is_next_to_img(self, p):
@@ -302,7 +353,7 @@ class HTMLCoder(object):
         """
         if self.Count_Word:
             return self.__wordSum // 600 # 每 600字
-        elif self.Count_Pict:
+        elif self.Count_Picture:
             if 0 <= self.__pictSum < 20:
                 return 3
             elif 20 <= self.__pictSum < 30:
@@ -331,6 +382,8 @@ class HTMLCoder(object):
             """按段落类型情况分类处理"""
             if self.regex_comment.match(p.text): # 先匹配注释
                 continue
+            elif self.regex_param.match(p.text): # 匹配参数定义符
+                self.__handle_param(p)
             elif self.regex_zone.match(p.text):  # 再匹配区域定义符
                 self.__handle_zone(p)
             elif self.__zoneSt.empty(): # 当前不在任何区域内
@@ -354,14 +407,17 @@ class HTMLCoder(object):
         if not self.__zoneSt.empty(): # 区域未闭合
             raise ContradictoryZoneError("{%% end%s %%} is missing" % self.__zoneSt.peek())
 
+        if all([self.Count_Picture, self.Count_Word]): # 校验参数合理性
+            raise MultiCountConflictError("you can't count words and pictures at the same time !")
+
         """构造字数统计框"""
         if self.Count_Word:
             self.__count + PCount(span("全文共"), R16(self.__wordSum), span("字，阅读大约需要"),\
                  R16(self.__get_read_time()), span("分钟。"))
-        elif self.Count_Pict:
+        elif self.Count_Picture:
             self.__count + PCount(span("全文共"), R16(self.__pictSum), span("张图，阅读大约需要"),\
                  R16(self.__get_read_time()), span("分钟。"))
-        if self.Count_Word or self.Count_Pict: # 可以都不选，则都不构造
+        if self.Count_Word or self.Count_Picture: # 可以都不选，则都不构造
             self.__head.insert(self.__count, Br()) # 头插一行
 
         """完成 head-box 的构造"""
@@ -369,7 +425,7 @@ class HTMLCoder(object):
         self.__head.append(PHr(Hr()))  # 构造分割线
 
         """构造参考文献框"""
-        if self.Has_Ref:
+        if self.Has_Reference:
             self.__tail.insert(Br(), self.__ref) # 先插一行
 
         self.__tail + Br() # 最后插一行
@@ -419,10 +475,27 @@ class HTMLCoder(object):
                 else:
                     # self.logger.debug("-> %s" % zone)
                     self.__zoneSt.push(zone) # 进入该区域
+                    self.__inPreZone = False # 已进入其他区域
+
+    def __handle_param(self, p):
+        """ 参数定义符 """
+        key, value = self.regex_param.match(p.text).group(1,2)
+        if not self.__inPreZone:
+            raise ParamDefineTooLateError("you should define param '%s' at the beginning of the *.docx document !" % key)
+        if key not in self.params:
+            raise ParamKeyError("unregisted param '%s' !" % key)
+        if value in self.trueValues:
+            self.__setattr__(key, True)
+            if key == "Count_Picture":
+                self.Count_Word = False # 特别指定 Count_Pictrue 与 Count_Word 互斥
+        elif value in self.falseValues:
+            self.__setattr__(key, False)
+        else:
+            raise ParamValueError("set param '%s' to %s or %s" % (key, self.trueValues, self.falseValues))
 
     def __handle_head(self, p):
         """ 开头段 """
-        if self.No_Rpt: # 开头段只需要处理记者信息，没有记者信息则直接可以跳过
+        if self.No_Reporter: # 开头段只需要处理记者信息，没有记者信息则直接可以跳过
             pass
         elif p.text: # 记者信息，需转义半角
             if self.__is_bold(p): #加粗，为记者信息标题
@@ -462,7 +535,7 @@ class HTMLCoder(object):
             if align == 'right': # 尾注，记者信息，需转义
                 self.__tail + PEndNote(self.__to_SBC_case(p.text)) # 不空行
             else: # 其余视为左对齐注释和参考文献
-                if self.Has_Ref:
+                if self.Has_Reference:
                     if self.__is_bold(p): # 标题
                         self.__ref + PRef(R15(p.text))
                     else:

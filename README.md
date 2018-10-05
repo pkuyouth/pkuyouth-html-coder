@@ -1,6 +1,6 @@
 # PKUyouthHTMLCoder
 
-《北大青年》微信推送自动排版小工具 v1.0.7
+《北大青年》微信推送自动排版小工具 v1.0.8
 
 
 ## 环境配置
@@ -77,10 +77,11 @@ debian-9:~/PKUyouthHTMLCoder# tree
 │   ├── tags.py                         # DOM 节点定义
 │   ├── tietuku.py                      # 贴图库 API
 │   └── util.py                         # 通用函数/类
+├── log                             # 日志输出目录
 ├── project                         # 项目目录
 │   ├── build                           # 排版结果的输出目录
 │   ├── old                             # 存放旧工程
-│   ├── run.py                          # 主程序
+│   ├── main.py                         # 主程序
 │   └── template                    # 模板和样例
 │       ├── sample.docx                 # 样例
 │       ├── template.concise.docx       # 模板-精简版
@@ -102,8 +103,8 @@ debian-9:~/PKUyouthHTMLCoder/project# cp template/template.docx ./today_prj.docx
 debian-9:~/PKUyouthHTMLCoder/project# ls -l
 total 20
 drwxr-xr-x 2 root root    24 Aug  5 10:21 build
+-rwxr-xr-x 1 root root  1633 Aug  5 10:21 main.py
 drwxr-xr-x 2 root root    24 Aug  5 10:21 old
--rwxr-xr-x 1 root root  1633 Aug  5 10:21 run.py
 drwxr-xr-x 2 root root    46 Aug  5 10:21 template
 -rw-r--r-- 1 root root 13718 Aug  5 10:47 today_prj.docx
 ```
@@ -112,9 +113,9 @@ drwxr-xr-x 2 root root    46 Aug  5 10:21 template
 
 > 由于不同版本的 word 编码的 \*.docx 文件，内部使用的 xml 规则不统一，出于兼容性考虑，请直接使用提供好的 \*.docx 文件来排版，确保使用的是 `Microsoft Word 2007-2013 XML (.docx)` 格式，避免出现兼容性问题。但如果仍发现有排版异常，请及时将其与小哥反馈。
 
-3. 运行 `run.py`，即可完成转码。
+3. 运行 `main.py`，即可完成转码。
 ```console
-debian-9:~/PKUyouthHTMLCoder/project# python3 run.py
+debian-9:~/PKUyouthHTMLCoder/project# python3 main.py
 [INFO] docxparser, 14:51:08, parse /root/PKUyouthHTMLCoder/project/today_prj.docx
 [INFO] tietuku, 14:51:08, uploading image image1.jpeg
 [INFO] tietuku, 14:51:09, get image image2.jpeg from cache
@@ -136,6 +137,8 @@ debian-9:~/PKUyouthHTMLCoder/project/build# ls
 preview.html  today_prj.html
 ```
 
+> 如果程序因错误而异常退出，将会在 `log` 文件夹内记录错误日志。
+
 5. 双击 `preview.html` 可以在浏览器中查看编码结果，你可以根据预览结果返回到 `project` 目录中，重新修改和转码 \*.docx 文件，在浏览器中按 `F5` 刷新，即可实时查看修改结果。
 
 > 程序无法识别在 \*.docx 编辑过程中对图片的旋转处理，因此，需要将图片 **预先旋转** 好后再插入，否则在预览中会出现方向错误的图片。
@@ -152,10 +155,12 @@ preview.html  today_prj.html
 
 ### 参数配置
 
-在 `project` 目录下，运行 `run.py -h` 或 `run.py --help` ，可查看参数的说明字段。
+#### 方法一：通过命令行进行配置
+
+在 `project` 目录下，运行 `main.py -h` 或 `main.py --help` ，可查看参数的说明字段。
 ```console
-debian-9:~/PKUyouthHTMLCoder/project# python3 run.py --help
-Usage: run.py [options]
+debian-9:~/PKUyouthHTMLCoder/project# python3 main.py --help
+Usage: main.py [options]
 
 HTMLCoder -- A small tool that can convert a '*.docx' file to a '*.html' file,
 which is in accord with PKUyouth's style.
@@ -189,12 +194,18 @@ Options:
 
 例如，设置为使用 SM.MS 图床，统计图片数，且不输出记者信息：
 ```console
-debian-9:~/PKUyouthHTMLCoder/project# python3 run.py -s SM.MS --no-reporter --count-picture
+debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --no-reporter --count-picture
 ```
+
 
 #### 关于图床：
 
 该项目目前提供了 `Tietuku`, `SM.MS`, `Elimage` 三款免费图床的 API 接口封装，默认使用 `Tietuku` ，因为其上传速度较快，且并发下载速度较快，复制过程中不容易掉图。后两款图床的服务器在境外，相较之下速度较慢。不过需要注意 Tietuku 存在较多限制，比如图片自动过期（7 天）和上传频率限制（<= 100 张/小时）等。本项目对其上传图片的默认缓存时间是 12 小时 。（注：过期不代表推送中的图片过期，推送中的图片一经复制上传成功后将永久有效）
+
+
+#### 方法二：通过 \*.docx 文档进行配置
+
+为了方便起见，该项目还提供了直接在 \*.docx 文档中配置常用参数的方法。在模板文档上方的参数定义区内已预先设定好了三个支持的参数，其含义同上，如果需要指定相应参数，只需要将相应语句前的注释符 **#** 去掉即可。此处的参数定义优先级高于命令行的参数定义优先级。请确保在 **文案开始前** 的位置就将参数定义完毕。
 
 
 ### 模板规则
@@ -204,6 +215,7 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 run.py -s SM.MS --no-reporter --co
 | Symbol | Meaning |
 | :----- | :------ |
 | #      | 注释符，该行内容全部忽略 |
+| @ key = value | 参数设置符 |
 | {% xxx %} | 区域定义符 -- 起始边界 |
 | {% endxxx %}| 区域定义符 -- 终止边界 |
 
@@ -355,6 +367,7 @@ docx_unzip/word/media/
 - v1.0.5 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考文献的错误。
 - v1.0.6 修复了参考文献与尾注间多空一行的样式错误。
 - v1.0.7 允许定义编者按和记者手记；允许定义 ignore 区域；修改了上传日志的输出的文件名；添加了限制图片最大宽度的 css 样式；添加了精简版的 template.docx 文档。
+- v1.0.8 修复了在 \*.docx 文件中添加矢量形状导致插图识别错误的问题；修复了通过“样式”间接定义的加粗、居中等样式无法识别的错误；添加了不允许多张图片共存于同一段落内的限制；允许在 \*.docx 文档内定义编码参数；添加了以文件形式输出错误日志的功能。
 
 ## 证书
 

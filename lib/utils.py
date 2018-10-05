@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: lib/util.py
+# filename: lib/utils.py
 #
 # 通用的 function / class
 #
 
-
 import os
-import sys
+import time
 import logging
 import hashlib
 from configparser import RawConfigParser, NoSectionError, NoOptionError
@@ -17,11 +16,12 @@ try:
 except ModuleNotFoundError:
     import json
 
-from error import NoConfigFileError, NoConfigOptionError, NoConfigSectionError
+from errors import NoConfigFileError, NoConfigOptionError, NoConfigSectionError
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 文件夹根目录
 Config_Dir = os.path.join(Root_Dir, "config/") # 配置文件夹
+Log_Dir = os.path.join(Root_Dir, "log/") # 日志输出文件夹
 
 
 __all__ = [
@@ -100,60 +100,54 @@ class Logger(object):
             class:
                 Default_Name     str                    缺省的日志名
             instance:
-                logger           logging.Logger         logging 的 Logger 对象
-                format           logging.Formatter      日志格式
-                console_headler  logging.StreamHandler  控制台日志 handler
+                _logger          logging.Logger         logging 的 Logger 对象
     """
-    Default_Name = 'htmlcoder'
+    Default_Name = __name__
 
     def __init__(self, name=None):
-        self.logger = logging.getLogger(name or self.Default_Name)
-        self.logger.setLevel(logging.DEBUG)
-        self.add_handler(self.console_headler)
+        self._logger = logging.getLogger(name or self.Default_Name)
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.addHandler(self.__get_console_headler())
+        self._logger.addHandler(self.__get_file_handler())
 
-    @property
-    def format(self):
-        fmt = ("[%(levelname)s] %(name)s, %(asctime).19s, %(message)s", "%H:%M:%S")
-        return logging.Formatter(*fmt)
-
-    @property
-    def console_headler(self):
-        console_headler = logging.StreamHandler(sys.stdout)
+    @staticmethod
+    def __get_console_headler():
+        """ 控制台输出 handler """
+        console_headler = logging.StreamHandler()
         console_headler.setLevel(logging.DEBUG)
-        console_headler.setFormatter(self.format)
+        console_headler.setFormatter(logging.Formatter("[%(levelname)s] %(name)s, %(asctime)s, %(message)s", "%H:%M:%S"))
         return console_headler
 
-    def add_handler(self, handler):
-        """ logging.addHander 函数的封装，非重复地添加 handler
-
-            Args:
-                handler    logging.Handler    logging 的 Handler 对象
-            Returns:
-                None
-        """
-        for hd in self.logger.handlers:
-            if hd.__class__.__name__ == handler.__class__.__name__:
-                return # 不重复添加
-        self.logger.addHandler(handler)
+    @staticmethod
+    def __get_file_handler():
+        """ 文件输出 handler ，只输出错误日志 """
+        file = "%s.error.log".format() % time.strftime("%Y-%m-%d", time.localtime(time.time()))
+        file_headler = logging.FileHandler(os.path.join(Log_Dir, file), encoding="utf-8")
+        file_headler.setLevel(logging.ERROR)
+        file_headler.setFormatter(logging.Formatter("[%(levelname)s] %(name)s, %(asctime)s, %(message)s", "%Y-%m-%d %H:%M:%S"))
+        return file_headler
 
     """
         以下是对 logging 的五种 level 输出函数的封装
         并定义 __call__ = logging.info
     """
     def debug(self, *args, **kwargs):
-        return self.logger.debug(*args, **kwargs)
+        return self._logger.debug(*args, **kwargs)
 
     def info(self, *args, **kwargs):
-        return self.logger.info(*args, **kwargs)
+        return self._logger.info(*args, **kwargs)
 
     def warning(self, *args, **kwargs):
-        return self.logger.warning(*args, **kwargs)
+        return self._logger.warning(*args, **kwargs)
+
+    def exception(self, *args, **kwargs):
+        return self._logger.exception(*args, **kwargs)
 
     def error(self, *args, **kwargs):
-        return self.logger.error(*args, **kwargs)
+        return self._logger.error(*args, **kwargs)
 
     def critical(self, *args, **kwargs):
-        return self.logger.critical(*args, **kwargs)
+        return self._logger.critical(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
         return self.info(*args, **kwargs)

@@ -5,11 +5,10 @@
 # 自定义的 HTML 节点类
 #
 
-
 from lxml import etree
 from lxml.builder import E
 
-from util import Config
+from utils import Config
 
 
 config = Config('style.ini')

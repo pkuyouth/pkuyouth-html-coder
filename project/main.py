@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# filename: run.py
+# filename: main.py
 
 
 __author__  = "Rabbit"
-__version__ = "1.0.7"
-__date__    = "2018.10.03"
+__version__ = "1.0.8"
+__date__    = "2018.10.05"
 
 
 import sys
@@ -15,10 +15,12 @@ import os
 from datetime import datetime
 from optparse import OptionParser, OptionGroup
 
-from util import Config
 from coder import HTMLCoder
-from error import NoDocxFileError
+from utils import Config, Logger
+from errors import NoDocxFileError
 
+
+logger = Logger("main")
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../')   # 项目根目录
 Static_Dir = os.path.join(Root_Dir, "static/")              # 静态文件夹
@@ -49,7 +51,7 @@ def main(**kwargs):
 	htmlcoder = HTMLCoder(file=__get_docx_file(), output=Build_Dir, **kwargs)
 	htmlcoder.work()
 
-	with open(os.path.join(Static_Dir, "preview.template.html"), "r", encoding="utf-8") as rfp:
+	with open(os.path.join(Static_Dir, "preview.template.html"), "r", encoding="utf-8-sig") as rfp:
 		with open(os.path.join(Build_Dir, "preview.html"), "w", encoding="utf-8") as wfp:
 			wfp.write(rfp.read().format(
 				title = htmlcoder.filename,
@@ -85,5 +87,8 @@ if __name__ == '__main__':
 	options, args = parser.parse_args()
 
 
-	main(**options.__dict__)
-
+	try:
+		main(**options.__dict__)
+	except Exception as err:
+		logger.exception(err)
+		# raise err

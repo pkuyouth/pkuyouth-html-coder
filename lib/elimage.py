@@ -13,8 +13,8 @@ from io import BytesIO
 from functools import partial
 import requests
 
-from util import json_dump, json_load, MD5, SHA1, Logger, Config
-from error import JSONDecodeError, SMMSUploadError, SMMSGetListError, SMMSClearError
+from utils import json_dump, json_load, MD5, SHA1, Logger, Config
+from errors import JSONDecodeError, SMMSUploadError, SMMSGetListError, SMMSClearError
 
 
 Root_Dir = os.path.join(os.path.dirname(__file__), '../') # 项目根目录

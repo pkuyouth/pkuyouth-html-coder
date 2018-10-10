@@ -49,7 +49,7 @@ class DocxParser(object):
     """
     logger = Logger('docxparser')
     config = Config('coder.ini')
-    illustration = ("edtnote","rptnote")
+    illustration = ("editornote","reporternote")
 
     def __init__(self, file, output, **kwargs):
         """
@@ -125,15 +125,30 @@ class DocxParser(object):
             styleMap[styleId] = eStyle
         return styleMap
 
+    """
+        以下函数用于通过 imgLinks 映射表获取信息
+
+        Args:
+            rId       str    图片在 docx 文件中的 id
+        Returns:
+            result    str    图片的相应数据
+    """
+
     def get_img_src(self, rId):
         """ 获得图片外链
-
-            Args:
-                rId         str    图片在 docx 文件中的 id
-            Returns:
-                src         str    图片外链
         """
         return self.imgLinks[rId]['url']
+
+    def get_img_md5(self, rId):
+        """ 获得图片 md5 值
+        """
+        return self.imgLinks[rId]['md5']
+
+    def get_img_sha1(self, rId):
+        """ 获得图片 sha1 值
+        """
+        return self.imgLinks[rId]['sha1']
+
 
 
 class HTMLCoder(object):
@@ -155,23 +170,21 @@ class HTMLCoder(object):
                 docx             DocxParser          DocxParser 实例
                 filename         str                 去拓展名的 docx 文件名
                 Output_Dir       str                 HTML 文档的生成目录
-                No_Reporter      bool                编码参数：是否有记者信息
-                Has_Reference    bool                编码参数：是否有参考文献
                 Count_Word       bool                编码参数：是否统计字数，不可与 Count_Picture 同时为 True
                 Count_Picture    bool                编码参数：是否统计图片，不可与 Count_Word 同时为 True
     """
     logger = Logger('htmlcoder')
     config = Config('coder.ini')
 
-    zones = ("ignore","head","body","tail","edtnote","rptnote")
-    params = ("No_Reporter","Has_Reference","Count_Picture")
+    zones = ("ignore","reporter","body","ending","editornote","reporternote","reference")
+    params = ("No_Reporter","Count_Picture")
     trueValues = ("True","true","1")
     falseValues = ("False","false","0")
 
-    regex_comment = re.compile(r"^#") # 匹配注释 # ...
-    regex_param = re.compile(r"^@\s*(\S+)\s*=\s*(\S+).*$", re.I) # 匹配参数设置符 @ key = value
+    regex_comment = re.compile(r"^[#|＃]") # 匹配注释 # ...
+    regex_param = re.compile(r"^[@|＠]\s*(\S+)\s*=\s*(\S+).*$", re.I) # 匹配参数设置符 @ key = value
     regex_zone = re.compile(r"^\s*{%\s*(\S+)\s*%}.*$", re.I) # 匹配区域定义符 {% xxx %}
-    regex_zoneEnd = re.compile(r"^end(\S+)$", re.I) # 匹配 {% endxxxx %}
+    regex_zoneEnd = re.compile(r"^END(\S+)$") # 匹配 {% ENDxxxx %} ，大小写敏感
 
     def __init__(self, file, output, **kwargs):
         """
@@ -188,8 +201,6 @@ class HTMLCoder(object):
         self.Output_Dir = output
 
         """ 编码参数"""
-        self.No_Reporter = kwargs.get('no_reporter') or self.config.getboolean('params', 'no_reporter')
-        self.Has_Reference = kwargs.get('has_reference') or self.config.getboolean('params', 'has_reference')
 
         if kwargs.get('count_picture'):
             self.Count_Word = False
@@ -201,10 +212,11 @@ class HTMLCoder(object):
         """ 过程变量"""
         self.__head = HeadBox()                  # 开头部分 box
         self.__body = BodyBox()                  # 正文部分 box
-        self.__tail = TailBox()                  # 结尾部分 box
-        self.__edtNote = EdtNoteBox()            # 编者按 box
-        self.__rptNote = RptNoteBox()            # 记者手记 box
-        self.__ref = RefBox()                    # 参考文献框 box
+        self.__ending = EndingBox()              # 结尾部分 box
+        self.__reporter = ReporterBox()          # 记者信息 box
+        self.__editorNote = EditorNoteBox()      # 编者按 box
+        self.__reporterNote = ReporterNoteBox()  # 记者手记 box
+        self.__reference = ReferenceBox()        # 参考文献框 box
         self.__count = CountBox()                # 字数统计框 box
         self.__html = HTML(title=self.filename)  # 整体 HTML 文档
         self.__wordSum = 0                       # 字数统计
@@ -310,13 +322,17 @@ class HTMLCoder(object):
 
             Returns:
                 src    str    当前段落图片的外链
+            Raises:
+                MultiPictureConflictError    多行图片共存一行
         """
         imgs = self.__find_img(p) # 实际上应该唯一
-        if len(imgs) > 1: # 如果以行内图片不唯一，则报错
-            raise MultiPictureConflictError("don't place %s pictrues in the same paragraph !" % len(imgs))
         r_ns = "{%s}" % p.nsmap['r']
-        rId = imgs[0].get(r_ns+'embed') or img.get(r_ns+'id')
-        return self.docx.get_img_src(rId)
+        rIds = set(img.get(r_ns+'embed') or img.get(r_ns+'id') for img in imgs) # 可能有多个图片，但可能是相同的 rId，代表同一张图
+        imgsSHA1 = set(self.docx.get_img_sha1(rId) for rId in rIds) # 或是不同 rId，但是指向的图片相同，此处通过 sha1 校验
+        if len(imgsSHA1) > 1: # 不允许多张图共存于一行
+            raise MultiPictureConflictError("don't place %s pictrues in the same paragraph !" % len(imgsSHA1))
+        else:
+            return self.docx.get_img_src(rIds.pop())
 
     def __is_next_to_img(self, p):
         """ 判断当前段落之前是否是图片段
@@ -352,7 +368,7 @@ class HTMLCoder(object):
                 read_time    int    阅读时间
         """
         if self.Count_Word:
-            return self.__wordSum // 600 # 每 600字
+            return (self.__wordSum + 300) // 600 # 每 600字 （四舍五入）
         elif self.Count_Picture:
             if 0 <= self.__pictSum < 20:
                 return 3
@@ -390,16 +406,18 @@ class HTMLCoder(object):
                 pass
             elif self.__zoneSt.peek() == 'ignore': # 处在忽略段落
                 pass
-            elif self.__zoneSt.peek() == 'head':
-                self.__handle_head(p)
+            elif self.__zoneSt.peek() == 'reporter': # 记者信息是唯一需要自定义的头部信息
+                self.__handle_reporter(p)
             elif self.__zoneSt.peek() == 'body':
                 self.__handle_body(p)
-            elif self.__zoneSt.peek() == 'tail':
-                self.__handle_tail(p)
-            elif self.__zoneSt.peek() == 'edtnote':
-                self.__handle_edtnote(p)
-            elif self.__zoneSt.peek() == 'rptnote':
-                self.__handle_rptnote(p)
+            elif self.__zoneSt.peek() == 'ending':
+                self.__handle_ending(p)
+            elif self.__zoneSt.peek() == 'editornote':
+                self.__handle_editornote(p)
+            elif self.__zoneSt.peek() == 'reporternote':
+                self.__handle_reporternote(p)
+            elif self.__zoneSt.peek() == 'reference':
+                self.__handle_ref(p)
             else: # 非注释，非区域定义符，堆栈非空，但不能匹配任何一种情况
                 raise Exception # 这种情况不应该出现
 
@@ -409,6 +427,10 @@ class HTMLCoder(object):
 
         if all([self.Count_Picture, self.Count_Word]): # 校验参数合理性
             raise MultiCountConflictError("you can't count words and pictures at the same time !")
+
+        """构造记者信息"""
+        if len(self.__reporter) > 2: # 含有除了标题外的其他元素，由于标题前还有空行，故最小值为 2
+            self.__head + self.__reporter
 
         """构造字数统计框"""
         if self.Count_Word:
@@ -425,40 +447,40 @@ class HTMLCoder(object):
         self.__head.append(PHr(Hr()))  # 构造分割线
 
         """构造参考文献框"""
-        if self.Has_Reference:
-            self.__tail.insert(Br(), self.__ref) # 先插一行
+        if len(self.__reference) > 1: # 含有除了标题外的其他元素
+            self.__ending.insert(Br(), self.__reference) # 先插一行
 
-        self.__tail + Br() # 最后插一行
+        self.__ending + Br() # 最后插一行
 
         """先构造记者手记"""
-        if self.__rptNote.has_child():
-            self.__rptNote.insert(Img(self.docx.get_img_src("rptnote"))) # 记者手记四个字
-            self.__rptNote + PHr(Hr()) # 加一条分割线
+        if self.__reporterNote.has_child():
+            self.__reporterNote.insert(Img(self.docx.get_img_src("reporternote"))) # 记者手记四个字
+            self.__reporterNote + PHr(Hr()) # 加一条分割线
 
         """再构造编者按"""
-        if self.__edtNote.has_child():
-            self.__edtNote.insert(Img(self.docx.get_img_src("edtnote"))) # 编者按三个字
-            self.__edtNote + PHr(Hr()) # 加一条分割线
+        if self.__editorNote.has_child():
+            self.__editorNote.insert(Img(self.docx.get_img_src("editornote"))) # 编者按三个字
+            self.__editorNote + PHr(Hr()) # 加一条分割线
 
         """最后合并 box ，构造 HTML 文档"""
         self.__html + WrapBox(self.__head)
-        if self.__edtNote.has_child():
-            self.__html + WrapBox(self.__edtNote)
-        if self.__rptNote.has_child():
-            self.__html + WrapBox(self.__rptNote)
-        self.__html + WrapBox(self.__body) + WrapBox(self.__tail)
+        if self.__editorNote.has_child():
+            self.__html + WrapBox(self.__editorNote)
+        if self.__reporterNote.has_child():
+            self.__html + WrapBox(self.__reporterNote)
+        self.__html + WrapBox(self.__body) + WrapBox(self.__ending)
 
     def __handle_zone(self, p):
         """ 区域定义符段 """
-        zoneText = self.regex_zone.match(p.text).group(1).lower()
+        zoneText = self.regex_zone.match(p.text).group(1)
         if self.regex_zoneEnd.match(zoneText): # 区域结尾
             zone = self.regex_zoneEnd.match(zoneText).group(1)
             if zone not in self.zones: # 非法区域
-                raise UnregisteredZoneError("unregisted zone %s in {%% %s %%}" % (zone, zoneText))
+                raise UnregisteredZoneError("unregisted zone '%s' in {%% %s %%}" % (zone, zoneText))
             elif self.__zoneSt.empty(): # 不在任何区域内
-                raise ContradictoryZoneError("unexpected {%% end%s %%} , not in any zone now !" % zone)
+                raise ContradictoryZoneError("unexpected {%% END%s %%} , not in any zone now !" % zone)
             elif self.__zoneSt.peek() != "ignore" and zone != self.__zoneSt.peek(): #不配对
-                raise UnmatchZoneError("{%% end%s %%} doesn't match current zone %s !" % (zone, self.__zoneSt.peek()))
+                raise UnmatchZoneError("{%% END%s %%} doesn't match current zone '%s' !" % (zone, self.__zoneSt.peek()))
             else:
                 if self.__zoneSt.peek() == "ignore" and zone != "ignore":
                     pass
@@ -468,7 +490,7 @@ class HTMLCoder(object):
         else: # 区域开始
             zone = zoneText
             if zone not in self.zones: # 非法区域
-                raise UnregisteredZoneError("unregisted zone %s in {%% %s %%}" % (zone, zoneText))
+                raise UnregisteredZoneError("unregisted zone '%s' in {%% %s %%}" % (zone, zoneText))
             else:
                 if self.__zoneSt.peek() == "ignore":
                     pass
@@ -493,15 +515,13 @@ class HTMLCoder(object):
         else:
             raise ParamValueError("set param '%s' to %s or %s" % (key, self.trueValues, self.falseValues))
 
-    def __handle_head(self, p):
-        """ 开头段 """
-        if self.No_Reporter: # 开头段只需要处理记者信息，没有记者信息则直接可以跳过
-            pass
-        elif p.text: # 记者信息，需转义半角
+    def __handle_reporter(self, p):
+        """ 记者信息 """
+        if p.text: # 记者信息，需转义半角
             if self.__is_bold(p): #加粗，为记者信息标题
-                self.__head + Br() + PRpt(self.__to_SBC_case(p.text), bold=True) # 前加一行，其后不空行
+                self.__reporter + Br() + PRpt(self.__to_SBC_case(p.text), bold=True) # 前加一行，其后不空行
             else:
-                self.__head + PRpt(self.__to_SBC_case(p.text)) # 其后不空行
+                self.__reporter + PRpt(self.__to_SBC_case(p.text)) # 其后不空行
         else:
             pass
 
@@ -509,7 +529,7 @@ class HTMLCoder(object):
         """ 正文段 """
         if self.__find_img(p) != []: # 先找图
             if self.__is_next_to_img(p):
-                self.__body + Img(self.__get_img_src(p)) # 连续图片不空行
+                self.__body - Br + Img(self.__get_img_src(p)) + Br() # 连续图片不空行
             else:
                 self.__body + Img(self.__get_img_src(p)) + Br()
             self.__pictSum += 1
@@ -528,47 +548,47 @@ class HTMLCoder(object):
         else:
             pass
 
-    def __handle_tail(self, p):
+    def __handle_ending(self, p):
         """ 文末段 """
-        if p.text:
-            align = self.__get_align(p)
-            if align == 'right': # 尾注，记者信息，需转义
-                self.__tail + PEndNote(self.__to_SBC_case(p.text)) # 不空行
-            else: # 其余视为左对齐注释和参考文献
-                if self.Has_Reference:
-                    if self.__is_bold(p): # 标题
-                        self.__ref + PRef(R15(p.text))
-                    else:
-                        self.__ref + PRef(p.text)
-                else: # 目前认为已经没有左对齐注释，因此所有非右对齐文字可以直接略过
-                    pass
+        if p.text: # 所有文字均视为尾注
+            self.__ending + PEndNote(self.__to_SBC_case(p.text)) # 不空行
         else:
             pass
 
-    def __handle_edtnote(self, p):
+    def __handle_editornote(self, p):
         """ 编者按 """
         if p.text:
             align = self.__get_align(p)
             if align == "right": # 记者署名
-                self.__edtNote + PRNote(p.text) + Br()
+                self.__editorNote + PRNote(p.text) + Br()
             else: # 其他是正文
-                self.__edtNote + P(p.text) + Br()
+                self.__editorNote + P(p.text) + Br()
         else:
             pass
 
-    def __handle_rptnote(self, p):
+    def __handle_reporternote(self, p):
         """ 记者手记 """
         if p.text:
             align = self.__get_align(p)
             if align == "right": # 记者署名
-                self.__rptNote + PRNote(p.text) + Br()
+                self.__reporterNote + PRNote(p.text) + Br()
             else: # 其他是正文
-                self.__rptNote + P(p.text) + Br()
+                self.__reporterNote + P(p.text) + Br()
+        else:
+            pass
+
+    def __handle_ref(self, p):
+        """ 参考文献 """
+        if p.text:
+            if self.__is_bold(p): # 标题
+                self.__reference + PRef(R15(p.text))
+            else:
+                self.__reference + PRef(p.text)
         else:
             pass
 
     def work(self):
-        """ 编码的外部接口函数"""
+        """ 编码的外部接口函数 """
         self.__code()
 
         file = '%s.html' % self.filename

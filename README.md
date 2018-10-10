@@ -185,9 +185,9 @@ Options:
 - **--count-picture** 统计图片数（默认统计字数）
 
 
-例如，设置为使用 SM.MS 图床，统计图片数，且不输出记者信息：
+例如，设置为使用 SM.MS 图床，统计图片数：
 ```console
-debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --no-reporter --count-picture
+debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 ```
 
 

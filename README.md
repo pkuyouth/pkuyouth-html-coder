@@ -1,6 +1,6 @@
 # PKUyouthHTMLCoder
 
-《北大青年》微信推送自动排版小工具 v1.0.9
+《北大青年》微信推送自动排版小工具 v1.0.8
 
 
 ## 环境配置
@@ -67,8 +67,8 @@ debian-9:~/PKUyouthHTMLCoder# tree
 │   ├── style.ini                       # 排版的 css 样式配置
 │   └── tietuku.ini                     # 贴图库 图床配置
 ├── illustration                    # 文内通用插图
-│   ├── editornote.jpeg                 # “编者按” 三个字
-│   └── reporternote.jpeg               # “记者手记” 四个字
+│   ├── edtnote.jpeg                    # “编者按” 三个字
+│   └── rptnote.jpeg                    # “记者手记” 四个字
 ├── lib                             # 程序包
 │   ├── coder.py                        # 编码主程序
 │   ├── elimage.py                      # elimage API
@@ -124,8 +124,8 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py
 [INFO] tietuku, 14:51:11, uploading image image6.jpeg
 [INFO] tietuku, 14:51:11, uploading image image7.jpeg
 [INFO] tietuku, 14:51:12, uploading image image8.jpeg
-[INFO] tietuku, 14:51:13, uploading image reporternote.jpeg
-[INFO] tietuku, 14:51:13, uploading image editornote.jpeg
+[INFO] tietuku, 14:51:13, uploading image edtnote.jpeg
+[INFO] tietuku, 14:51:13, uploading image rptnote.jpeg
 [INFO] htmlcoder, 14:51:14, build today_prj.html in /root/PKUyouthHTMLCoder/project/build
 ```
 
@@ -176,12 +176,18 @@ Options:
   Parameters of Coding Process:
     Or will use default setting from 'config/coder.ini' file.
 
+    --no-reporter       Whether this article has reporters information or not.
+                        (Default: False)
+    --has-reference     Whether this article has references or not. (Default:
+                        False)
     --count-picture     Output picture's sum. (Default: False)
 ```
 
 #### 参数解释：
 
 - **-s/--static** 选择图片外链服务器（通常使用默认值即可）
+- **--no-reporter** 无记者信息（默认输出记者信息）
+- **--has-reference** 有参考资料（默认不输出参考资料）
 - **--count-picture** 统计图片数（默认统计字数）
 
 
@@ -205,49 +211,47 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 
 #### 符号说明
 
-| Symbol        | Meaning |
-| :------------ | :------ |
-| #             | 注释符，该行内容全部忽略 |
+| Symbol | Meaning |
+| :----- | :------ |
+| #      | 注释符，该行内容全部忽略 |
 | @ key = value | 参数设置符 |
-| {% xxx %}     | 区域定义符 -- 起始边界 |
-| {% ENDxxx %}  | 区域定义符 -- 终止边界 |
+| {% xxx %} | 区域定义符 -- 起始边界 |
+| {% endxxx %}| 区域定义符 -- 终止边界 |
 
 #### 区域划分
 
-| Zone         | Range |
-| :----------- | :---- |
-| ignore       | 忽略该区域内的所有内容 |
-| reporter     | 文前部分，包含 记者信息 |
-| body         | 正文部分，包含 正文、段落大标题、图片、图注 |
-| ending       | 尾注部分，包含 参考资料、尾注（左）、微信编辑、图片来源 |
-| editornote   | 编者按 |
-| reporternote | 记者手记 |
-| reference    | 参考资料 |
+| Zone    | Range |
+| :------ | :---- |
+| ignore  | 忽略该区域内的所有内容 |
+| head    | 文前部分，包含 记者信息 |
+| body    | 正文部分，包含 正文、段落大标题、图片、图注 |
+| tail    | 尾注部分，包含 参考文献、尾注（左）、微信编辑、图片来源 |
+| edtnote | 编者按 |
+| rptnote | 记者手记 |
 
 #### \*.docx 文档排版样式规定
 
-| Zone             | Component | Style |
-| :--------------- | :-------- | :---- |
-| **reporter**     | | |
-| reporter         | “记者信息”标题 | 加粗，任意对齐 |
-| reporter         | “记者信息”正文 | 不加粗，任意对齐，（默认） |
-| **body**         | | |
-| body             | 正文 | 左对齐/两端对齐，不加粗（默认） |
-| body             | 正文（右） | 右对齐，不加粗 |
-| body             | 图片 | 嵌入型版式，**单独成行**（否则同段落的文字将被忽略） |
-| body             | 图注 | 居中，不加粗 |
-| body             | 段落大标题 | 居中，加粗 |
-| **ending**       | | |
-| ending           | 微信编辑｜图片来源 | 任意格式（建议右对齐） |
-| **editornote**   | | |
-| editornote       | 正文 | 非右对齐 |
-| editornote       | 署名 | 右对齐 |
-| **reporternote** | | |
-| reporternote     | 正文 | 非右对齐 |
-| reporternote     | 署名 | 右对齐 |
-| **reference**    | | |
-| reference        | “参考资料”标题 | 加粗，任意对齐 |
-| reference        | “参考资料”正文 | 不加粗，任意对齐（默认） |
+| Zone    | Component | Style |
+| :------ | :-------- | :---- |
+| **head** | | |
+| head    | “记者信息”正文 | 任意对齐，不加粗（默认） |
+| head    | “记者信息”标题 | 任意对齐，加粗 |
+| **body** | | |
+| body    | 正文 | 左对齐/两端对齐，不加粗（默认） |
+| body    | 正文（右） | 右对齐，不加粗 |
+| body    | 图片 | **单独成行**（否则同段落的文字将被忽略） |
+| body    | 图注 | 居中，不加粗 |
+| body    | 段落大标题 | 居中，加粗 |
+| **tail** | | |
+| tail    | ”参考文献“标题 | 左对齐/两端对齐，加粗 |
+| tail    | ”参考文献“正文 | 左对齐/两端对齐，不加粗 |
+| tail    | 微信编辑｜图片来源 | 右对齐 |
+| **edtnote** | | |
+| edtnote | 正文 | 非右对齐 |
+| edtnote | 署名 | 右对齐 |
+| **rptnote** | | |
+| rptnote | 正文 | 非右对齐 |
+| rptnote | 署名 | 右对齐 |
 
 #### 几点说明：
 
@@ -295,8 +299,8 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 | 正文（右） | 14 px，右对齐，黑色 |
 | “本报记者”标题 | 16 px，两端对齐/左对齐，灰色，加粗 |
 | “本报记者”正文 | 14 px，两端对齐，灰色，空格用**全角** |
-| “参考资料”标题 | **15 px**，两端对齐/左对齐，红色，加粗 |
-| “参考资料”正文 | 12 px，两端对齐，灰色 |
+| “参考文献”标题 | **15 px**，两端对齐/左对齐，红色，加粗 |
+| “参考文献”正文 | 12 px，两端对齐，灰色 |
 | 尾注(左) | 12 px，两端对齐，灰色 |
 | 微信编辑｜图片来源 | 12 px，右对齐，灰色，竖线用**全角** |
 | 编者按｜勘误｜... | 见参考资料 [视觉｜北青排版规范2.1][ref-1] |
@@ -306,9 +310,8 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 ### 空行说明
 
 1. 头图前不空行，底图后不空行。
-2. 记者信息（或字数统计，如果没有记者信息）与下方的分割线间不空行。
-3. 编者按、记者手记的正文与其下的分割线间空一行。
-4. 各种组件间如果存在空行，那么应该是 **一行** 。例如，段落与段落、头图与字数统计、字数统计与记者信息、正文与参考资料、正文与尾注、微信编辑与底图等组件之间的空行均为 **一行** 。需要注意空行的字号应当统一为 **14 px** ，否则会出现空行高度不一致的情况。
+2. 编者按、记者手记的正文与其下的分割线间空一行。
+3. 各种组件间如果存在空行，那么应该是 **一行** 。例如，段落与段落、头图与字数统计、字数统计与记者信息、正文与参考文献、正文与尾注、微信编辑与底图等组件之间的空行均为 **一行** 。需要注意空行的字号应当统一为 **14 px** ，否则会出现空行高度不一致的情况。
 
 
 ### 秀米排版详细流程
@@ -360,11 +363,10 @@ docx_unzip/word/media/
 - v1.0.2 添加 SM.MS 与 Elimage 图床支持。
 - v1.0.3 修复了 Windows 环境下文件读写时编码错误的问题；添加了命令行界面，支持通过命令行选项来设置编码参数。
 - v1.0.4 修复了部分图片与下方段落间未能正确空行的偶发问题。
-- v1.0.5 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考资料的错误。
-- v1.0.6 修复了参考资料与尾注间多空一行的样式错误。
+- v1.0.5 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考文献的错误。
+- v1.0.6 修复了参考文献与尾注间多空一行的样式错误。
 - v1.0.7 允许定义编者按和记者手记；允许定义 ignore 区域；修改了上传日志的输出的文件名；添加了限制图片最大宽度的 css 样式；添加了精简版的 template.docx 文档。
 - v1.0.8 修复了在 \*.docx 文件中添加矢量形状导致插图识别错误的问题；修复了通过“样式”间接定义的加粗、居中等样式无法识别的错误；添加了不允许多张图片共存于同一段落内的限制；允许在 \*.docx 文档内定义编码参数；添加了以文件形式输出错误日志的功能。
-- v1.0.9 修复了部分图片识别错误的问题；修复了连续图片间未能正确空行的错误；优化了以文章字数计算阅读时间的算法；将“参考资料”和“记者信息”单独定义为区域，并删除了与参考资料和记者信息相关的参数定义，现在将根据区域内容自动判断是否需要输出参考资料或记者信息；修改了多图同处于单行的判定方法，现在允许在单行内重复放置相同图片，但最终只输出一张图（这主要是为了兼容 \*.docx 文档的某些编码问题）；允许通过全角字符“＃”和“＠”申明注释段和参数定义段。
 
 ## 证书
 

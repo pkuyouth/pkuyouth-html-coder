@@ -83,6 +83,7 @@ debian-9:~/PKUyouthHTMLCoder# tree
 │   ├── old                             # 存放旧工程
 │   ├── main.py                         # 主程序
 │   └── template                    # 模板和样例
+│       ├── sample.docx                 # 样例
 │       ├── template.concise.docx       # 模板-精简版
 │       └── template.docx               # 模板-附排版说明
 ├── requirements.txt

@@ -3,7 +3,7 @@
 # filename: lib/coder.py
 #
 # Docx 文档的解析类 / HTML 文档的编码类
-#
+
 
 import os
 import re

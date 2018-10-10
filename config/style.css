@@ -20,7 +20,11 @@
     color: #3E3E3E;
 }
 
-.div-edtnote { /* 编者按的 box */
+.div-reporter { /* 记者信息的 box */
+
+}
+
+.div-editornote { /* 编者按的 box */
     padding: 0px 10px;
     line-height: 2;
     font-size: 14px;
@@ -28,7 +32,7 @@
     color: #3E3E3E;
 }
 
-.div-rptnote { /* 记者手记的 box */
+.div-reporternote { /* 记者手记的 box */
     padding: 0px 10px;
     line-height: 2;
     font-size: 14px;
@@ -36,7 +40,7 @@
     color: #3E3E3E;
 }
 
-.div-tail { /* 文末部分的 box */
+.div-ending { /* 文末部分的 box */
     padding: 0px 10px;
     line-height: 2;
     font-size: 14px;
@@ -48,7 +52,7 @@
     border-left: 5px solid #A5A5A5;
 }
 
-.div-ref { /* 参考文献框的 box */
+.div-reference { /* 参考文献框的 box */
     border-left: 3px solid #A5A5A5;
 }
 

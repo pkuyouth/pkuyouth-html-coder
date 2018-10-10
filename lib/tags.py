@@ -3,7 +3,7 @@
 # filename: lib/tags.py
 #
 # 自定义的 HTML 节点类
-#
+
 
 from lxml import etree
 from lxml.builder import E
@@ -18,7 +18,8 @@ __all__ = [
     'span',\
     'Br','Hr','Img','H1','R15','R16','NSyb',\
     'P','PRNote','ImgNote','PEndNote','PCount','PRpt','PRef','PHr',\
-    'HeadBox','BodyBox','TailBox','EdtNoteBox','RptNoteBox','CountBox','RefBox','WrapBox',\
+    'HeadBox','BodyBox','EndingBox','CountBox','WrapBox',\
+        'ReporterBox','EditorNoteBox','ReporterNoteBox','ReferenceBox',\
     'HTML',\
 ]
 
@@ -117,7 +118,8 @@ class Tag(Node):
             for child in args:
                 self.append(child, bold=bold)
 
-    def __to_child_node(self, child, *args, bold=False):
+    @staticmethod
+    def __to_child_node(child, *args, bold=False):
         """ 将 __init__ 传入节点解析为 Node 节点
 
             Args:
@@ -134,10 +136,15 @@ class Tag(Node):
         else:
             raise TypeError("children of Tag must be a (str,int,float) or Node type, not %s !" % type(child))
 
+    def __len__(self):
+        """ 子节点个数
+        """
+        return len(self.children)
+
     def has_child(self):
         """ 是否拥有子节点
         """
-        return len(self.children) > 0
+        return len(self) > 0
 
     def insert(self, *args, index=0, bold=False):
         """ 类似于 list.insert ，在 children 列表中特定位置顺序添加若干子节点
@@ -344,17 +351,20 @@ class HeadBox(section):
 class BodyBox(section):
     class_ = 'div-body'
 
-class TailBox(section):
-    class_ = 'div-tail'
+class EndingBox(section):
+    class_ = 'div-ending'
 
-class EdtNoteBox(section):
-    class_ = 'div-edtnote'
+class ReporterBox(section):
+    class_ = 'div-reporter'
 
-class RptNoteBox(section):
-    class_ = 'div-rptnote'
+class EditorNoteBox(section):
+    class_ = 'div-editornote'
 
-class RefBox(section):
-    class_ = 'div-ref'
+class ReporterNoteBox(section):
+    class_ = 'div-reporternote'
+
+class ReferenceBox(section):
+    class_ = 'div-reference'
 
 class CountBox(section):
     class_ = 'div-count'

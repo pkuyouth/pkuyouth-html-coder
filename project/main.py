@@ -4,8 +4,8 @@
 
 
 __author__  = "Rabbit"
-__version__ = "1.0.9"
-__date__    = "2018.10.10"
+__version__ = "1.1.0"
+__date__    = "2018.10.12"
 
 
 import sys

@@ -534,16 +534,16 @@ class HTMLCoder(object):
                 self.__body + Img(self.__get_img_src(p)) + Br()
             self.__pictSum += 1
         elif p.text:
-            align = self.__get_align(p)
-            if align == 'center':
-                if self.__is_bold(p): # 加粗定义的标题
-                    self.__body + H1(p.text) + Br()
-                else: # 图注
+            if self.__is_bold(p): # 加粗定义的标题
+                self.__body + H1(p.text) + Br()
+            else:
+                align = self.__get_align(p)
+                if align == 'center': # 图注
                     self.__body - Br + ImgNote(NSyb(), span(p.text)) + Br() # 先减删去前一空行
-            elif align == 'right': # 右引用
-                self.__body + PRNote(p.text) + Br()
-            else: # 左对齐/两端对齐，正文
-                self.__body + P(p.text) + Br()
+                elif align == 'right': # 右引用
+                    self.__body + PRNote(p.text) + Br()
+                else: # 左对齐/两端对齐，正文
+                    self.__body + P(p.text) + Br()
             self.__wordSum += len(p.text) # 正文段的文字计入字数统计
         else:
             pass

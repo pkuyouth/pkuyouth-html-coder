@@ -1,6 +1,6 @@
 # PKUyouthHTMLCoder
 
-《北大青年》微信推送自动排版小工具 v1.0.9
+《北大青年》微信推送自动排版小工具 v1.1.0
 
 
 ## 环境配置
@@ -234,9 +234,9 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 | **body**         | | |
 | body             | 正文 | 左对齐/两端对齐，不加粗（默认） |
 | body             | 正文（右） | 右对齐，不加粗 |
+| body             | 标题 | 加粗，任意对齐 |
 | body             | 图片 | 嵌入型版式，**单独成行**（否则同段落的文字将被忽略） |
 | body             | 图注 | 居中，不加粗 |
-| body             | 段落大标题 | 居中，加粗 |
 | **ending**       | | |
 | ending           | 微信编辑｜图片来源 | 任意格式（建议右对齐） |
 | **editornote**   | | |
@@ -254,6 +254,49 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 1. \*.docx 文档中的任何多余空行均不会影响实际输出（事实上空行只起到分段作用）。
 2. 除以上必要样式外，其他任意样式均不影响实际输出（颜色、字体、字号、斜体、下划线等）。
 3. 如果原文档存在修订，请选择`全部接受`。通过选项卡 `审阅 > 修订 > 所有标记/简单标记` ，选择 `接受 > 接受所有修订` 。
+
+
+### 小贴士
+
+#### 图片导出
+
+有时插图文件体积过大，难以通过复制粘贴自动上传，而需要手动上传。这时可以方便地通过直接解压缩 \*.docx 文件的方式拿到编好号的原图：
+```console
+debian-9:~/PKUyouthHTMLCoder/project# unzip -d docx_unzip today_prj.docx
+Archive:  today_prj.docx
+  inflating: docx_unzip/_rels/.rels
+  inflating: docx_unzip/word/theme/theme1.xml
+  ......
+  inflating: docx_unzip/word/settings.xml
+  inflating: docx_unzip/word/media/image1.jpeg
+  inflating: docx_unzip/word/media/image4.jpeg
+  inflating: docx_unzip/word/media/image3.jpeg
+  inflating: docx_unzip/word/media/image2.jpeg
+  inflating: docx_unzip/word/media/image5.jpeg
+  inflating: docx_unzip/word/media/image6.jpeg
+  inflating: docx_unzip/word/media/image7.jpeg
+  inflating: docx_unzip/word/media/image8.jpeg
+  inflating: docx_unzip/word/media/image9.jpeg
+  inflating: docx_unzip/word/document.xml
+debian-9:~/PKUyouthHTMLCoder/project# tree docx_unzip/word/media/
+docx_unzip/word/media/
+├── image1.jpeg
+├── image2.jpeg
+├── image3.jpeg
+├── image4.jpeg
+├── image5.jpeg
+├── image6.jpeg
+├── image7.jpeg
+├── image8.jpeg
+└── image9.jpeg
+
+0 directories, 9 files
+```
+以 \*.zip 文件格式进行解压，解压得到的图片位于 `<docx_folder>/word/media` 目录内，已自动编好号。
+
+#### 图片压缩
+
+[TinyPNG](https://tinypng.com/) 是一个方便、实用的图片压缩网站，支持 `*.png` 和 `*.jpg` 文件，通过转化 24 位色为 8 位色来实现图片的压缩，可以在不改变图片尺寸的情况下，大幅度减少图片文件的体积（对于 adobe 图片，官方宣称可以减小 70% 以上的文件体积），并且压缩前后几乎看不出差别。因此，也可以将体积过大的图片通过 TinyPNG 进行压缩，重新插入 \*.docx 文档进行编码，这样可以大幅度提高成功上传的概率。
 
 
 ## 北青推送排版规则与秀米排版流程
@@ -317,54 +360,19 @@ debian-9:~/PKUyouthHTMLCoder/project# python3 main.py -s SM.MS --count-picture
 2. 务必 **充分利用** 预设的组件进行排版！并严格遵守 [视觉｜北青排版规范2.1][ref-1]，如有需要可以参考账号内已经排好的推送版面。（注：预设组件已附带了基础样式的调整，因此不需要在开始编辑前修改全局基础样式）
 3. 小哥真的没有用秀米排过我们的推送orz，就不在此胡说八道了，所以没有第三点了嗯 ...
 
-### 小贴士
-
-如果图片需要手动上传，可以通过直接解压缩 \*.docx 的方式来方便地拿到编好号的原图：
-```console
-debian-9:~/PKUyouthHTMLCoder/project# unzip -d docx_unzip today_prj.docx
-Archive:  today_prj.docx
-  inflating: docx_unzip/_rels/.rels
-  inflating: docx_unzip/word/theme/theme1.xml
-  ......
-  inflating: docx_unzip/word/settings.xml
-  inflating: docx_unzip/word/media/image1.jpeg
-  inflating: docx_unzip/word/media/image4.jpeg
-  inflating: docx_unzip/word/media/image3.jpeg
-  inflating: docx_unzip/word/media/image2.jpeg
-  inflating: docx_unzip/word/media/image5.jpeg
-  inflating: docx_unzip/word/media/image6.jpeg
-  inflating: docx_unzip/word/media/image7.jpeg
-  inflating: docx_unzip/word/media/image8.jpeg
-  inflating: docx_unzip/word/media/image9.jpeg
-  inflating: docx_unzip/word/document.xml
-debian-9:~/PKUyouthHTMLCoder/project# tree docx_unzip/word/media/
-docx_unzip/word/media/
-├── image1.jpeg
-├── image2.jpeg
-├── image3.jpeg
-├── image4.jpeg
-├── image5.jpeg
-├── image6.jpeg
-├── image7.jpeg
-├── image8.jpeg
-└── image9.jpeg
-
-0 directories, 9 files
-```
-解压得到的图片文件位于 `<docx_folder>/word/media` 目录内，已自动编好号。
-
 
 ## 更新日志
 
-- v1.0.1 上线版本。
-- v1.0.2 添加 SM.MS 与 Elimage 图床支持。
-- v1.0.3 修复了 Windows 环境下文件读写时编码错误的问题；添加了命令行界面，支持通过命令行选项来设置编码参数。
-- v1.0.4 修复了部分图片与下方段落间未能正确空行的偶发问题。
-- v1.0.5 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考资料的错误。
-- v1.0.6 修复了参考资料与尾注间多空一行的样式错误。
-- v1.0.7 允许定义编者按和记者手记；允许定义 ignore 区域；修改了上传日志的输出的文件名；添加了限制图片最大宽度的 css 样式；添加了精简版的 template.docx 文档。
-- v1.0.8 修复了在 \*.docx 文件中添加矢量形状导致插图识别错误的问题；修复了通过“样式”间接定义的加粗、居中等样式无法识别的错误；添加了不允许多张图片共存于同一段落内的限制；允许在 \*.docx 文档内定义编码参数；添加了以文件形式输出错误日志的功能。
-- v1.0.9 修复了部分图片识别错误的问题；修复了连续图片间未能正确空行的错误；优化了以文章字数计算阅读时间的算法；将“参考资料”和“记者信息”单独定义为区域，并删除了与参考资料和记者信息相关的参数定义，现在将根据区域内容自动判断是否需要输出参考资料或记者信息；修改了多图同处于单行的判定方法，现在允许在单行内重复放置相同图片，但最终只输出一张图（这主要是为了兼容 \*.docx 文档的某些编码问题）；允许通过全角字符“＃”和“＠”申明注释段和参数定义段。
+- **v1.0.1** 上线版本。
+- **v1.0.2** 添加 SM.MS 与 Elimage 图床支持。
+- **v1.0.3** 修复了 Windows 环境下文件读写时编码错误的问题；添加了命令行界面，支持通过命令行选项来设置编码参数。
+- **v1.0.4** 修复了部分图片与下方段落间未能正确空行的偶发问题。
+- **v1.0.5** 修复了文前统计框内段落左外边距不正确导致的样式错误；修复了不能通过命令行选项指定是否需要渲染参考资料的错误。
+- **v1.0.6** 修复了参考资料与尾注间多空一行的样式错误。
+- **v1.0.7** 允许定义编者按和记者手记；允许定义 ignore 区域；修改了上传日志的输出的文件名；添加了限制图片最大宽度的 css 样式；添加了精简版的 template.docx 文档。
+- **v1.0.8** 修复了在 \*.docx 文件中添加矢量形状导致插图识别错误的问题；修复了通过“样式”间接定义的加粗、居中等样式无法识别的错误；添加了不允许多张图片共存于同一段落内的限制；允许在 \*.docx 文档内定义编码参数；添加了以文件形式输出错误日志的功能。
+- **v1.0.9** 修复了部分图片识别错误的问题；修复了连续图片间未能正确空行的错误；优化了以文章字数计算阅读时间的算法；将“参考资料”和“记者信息”单独定义为区域，并删除了与参考资料和记者信息相关的参数定义，现在将根据区域内容自动判断是否需要输出参考资料或记者信息；修改了多图同处于单行的判定方法，现在允许在单行内重复放置相同图片，但最终只输出一张图（这主要是为了兼容 \*.docx 文档的某些编码问题）；允许通过全角字符“＃”和“＠”申明注释段和参数定义段。
+- **v1.1.0** 修改了正文部分标题的声明方式，现在不再需要在加粗的同时额外设置为居中对齐；修正了图注对齐方式为左对齐的样式错误。
 
 ## 证书
 

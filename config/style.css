@@ -71,7 +71,7 @@
 }
 
 .p-image-note { /* 图注段落 */
-    text-align: left;
+    text-align: justify;
     font-size: 12px;
     color: #A5A5A5;
     letter-spacing: 0px;

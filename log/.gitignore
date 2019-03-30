@@ -1,8 +1,0 @@
-# .gitignore sample
-###################
-
-# ignore all log files in this dir...
-*.log
-
-# ... except for this one.
-!.gitignore

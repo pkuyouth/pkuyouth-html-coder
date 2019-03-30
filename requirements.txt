@@ -1,3 +1,2 @@
-lxml==4.2.1
-requests==2.12.4
-simplejson==3.15.0
+lxml
+requests

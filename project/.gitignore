@@ -1,8 +1,0 @@
-# .gitignore sample
-###################
-
-# ignore all docx files in this dir...
-/*.docx
-
-# ... except for this one.
-!.gitignore
